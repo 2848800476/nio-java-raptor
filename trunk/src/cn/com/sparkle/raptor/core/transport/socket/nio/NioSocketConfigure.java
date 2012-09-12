@@ -10,17 +10,27 @@ public class NioSocketConfigure {
 	private int soLinger;
 	private int trafficClass;
 	private int processorNum = 1;
-	private int registerWriteDelay = 10;
-	private int registerReadDelay = 10;
+	private int registerWriteDelay = 0;
+	private int registerReadDelay = 0;
 	private int reRegisterWriteDelay = 300;
 	private int registerConnecterDelay = 0;
 	private int clearTimeoutSessionInterval = 300000;
 	private int trySendNum = 60;
 	private boolean isDaemon = false;
+	private int cycleBuffCellSize = 20000;
 	
 	
 	
 	
+	public int getCycleBuffCellSize() {
+		return cycleBuffCellSize;
+	}
+	public void setCycleBuffCellSize(int cycleBuffCellSize) {
+		this.cycleBuffCellSize = cycleBuffCellSize;
+	}
+	public void setProcessorNum(int processorNum) {
+		this.processorNum = processorNum;
+	}
 	public int getTrySendNum() {
 		return trySendNum;
 	}

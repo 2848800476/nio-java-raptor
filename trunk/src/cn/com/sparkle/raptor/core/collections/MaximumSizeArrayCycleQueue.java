@@ -1,6 +1,5 @@
 package cn.com.sparkle.raptor.core.collections;
 
-import java.util.concurrent.ArrayBlockingQueue;
 
 /*
  * The class is suited to limit the quene size.But the queue can't be resize when the number of elements 
