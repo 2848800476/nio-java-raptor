@@ -11,7 +11,6 @@ import java.util.Iterator;
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue;
 import cn.com.sparkle.raptor.core.delaycheck.DelayChecked;
 import cn.com.sparkle.raptor.core.delaycheck.DelayCheckedTimer;
-import cn.com.sparkle.raptor.core.filter.FilterChain;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
 
 public class NioSocketConnector {
@@ -23,7 +22,7 @@ public class NioSocketConnector {
 	private DelayChecked checkRegisterConnecter;
 	private class QueueBean{
 		SocketChannel sc;
-		FilterChain filterChain;
+		IoHandler handler;
 	}
 	public NioSocketConnector(NioSocketConfigure nscfg) throws IOException{
 		this.nscfg = nscfg;
@@ -40,9 +39,9 @@ public class NioSocketConnector {
 		};
 		DelayCheckedTimer.addDelayCheck(checkRegisterConnecter);
 	}
-	public void registerConnector(SocketChannel sc,FilterChain filterChain) throws Exception{
+	public void registerConnector(SocketChannel sc,IoHandler handler) throws Exception{
 		QueueBean a = new QueueBean();
-		a.filterChain = filterChain;
+		a.handler = handler;
 		a.sc = sc;
 		waitConnectQueue.push(a);
 		checkRegisterConnecter.needRun();
@@ -61,9 +60,9 @@ public class NioSocketConnector {
 //					long s = System.currentTimeMillis();
 					while((qb = waitConnectQueue.peek()) != null){
 						try {
-							qb.sc.register(selector, SelectionKey.OP_CONNECT,qb.filterChain);
+							qb.sc.register(selector, SelectionKey.OP_CONNECT,qb.handler);
 						} catch (ClosedChannelException e) {
-							qb.filterChain.getHandler().catchException(null, e);
+							qb.handler.catchException(null, e);
 						}
 						waitConnectQueue.poll();
 					}
@@ -78,13 +77,13 @@ public class NioSocketConnector {
 								key.cancel();
 								SocketChannel sc = (SocketChannel) key
 										.channel();
-								FilterChain filterChain = (FilterChain)key.attachment();
+								IoHandler handler = (IoHandler)key.attachment();
 								try {
 									if(sc.finishConnect()){
-										multNioSocketProcessor.addSession(filterChain, sc);
+										multNioSocketProcessor.addSession(handler, sc);
 									}
 								} catch (Exception e) {
-									filterChain.getHandler().catchException(null, e);
+										handler.catchException(null, e);
 									try{
 										sc.close();
 									}catch(Exception ee){}

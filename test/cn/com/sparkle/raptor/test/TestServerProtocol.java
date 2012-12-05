@@ -3,18 +3,24 @@ package cn.com.sparkle.raptor.test;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import cn.com.sparkle.raptor.core.buff.AllocateBytesBuff;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
+import cn.com.sparkle.raptor.core.buff.SyncBuffPool;
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue.QueueFullException;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
+import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler;
+import cn.com.sparkle.raptor.core.protocol.Protocol;
+import cn.com.sparkle.raptor.core.protocol.ProtocolHandler;
+import cn.com.sparkle.raptor.core.protocol.textline.TextLineProtocol;
 import cn.com.sparkle.raptor.core.session.IoSession;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketConfigure;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketServer;
 import cn.com.sparkle.raptor.core.transport.socket.nio.exception.SessionHavaClosedException;
 
-public class TestServer {
+public class TestServerProtocol {
 
 	/**
 	 * @param args
@@ -28,57 +34,44 @@ public class TestServer {
 		//nsc.setRevieveBuffSize(1024 * 2048);
 		//nsc.setTcpNoDelay(true);
 		NioSocketServer server = new NioSocketServer(nsc);
-		server.bind(new InetSocketAddress(1234),new TestHandler());
+		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(100000, 1024, 20, 300, 60, TimeUnit.SECONDS,new TextLineProtocol(), new TestProtocolHandler()));
 //		server.bind(new InetSocketAddress(12345),new FilterChain(new TestHandler()));
 	}
 	
 }
-class TestHandler implements IoHandler{
-	public static AtomicInteger i = new AtomicInteger(0);
+class TestProtocolHandler implements ProtocolHandler{
+
 	@Override
-	public void onMessageRecieved(IoSession session, IoBuffer message) {
+	public void onOneThreadSessionOpen(SyncBuffPool buffPool,
+			Protocol protocol, IoSession session) {
+		// TODO Auto-generated method stub
 		
-		System.out.println("recieve");
-		IoBuffer temp = new AllocateBytesBuff(1024);
-		try {
-			session.tryWrite(temp);
-		} catch (SessionHavaClosedException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
 	}
 
 	@Override
-	public void onMessageSent(IoSession session, IoBuffer message) {
+	public void onOneThreadSessionClose(IoSession session) {
 		// TODO Auto-generated method stub
-		System.out.println("message sent");
+		
 	}
 
 	@Override
-	public void onSessionClose(IoSession session) {
+	public void onOneThreadCatchException(IoSession session, Throwable e) {
 		// TODO Auto-generated method stub
-		int temp = i.addAndGet(-1);
-		if(temp%1000 ==0) System.out.println("disconnected " + i);
-//		System.out.println("session closed!!!");
+		
 	}
 
+	@Override
+	public void onOneThreadMessageRecieved(SyncBuffPool buffPool,
+			Protocol protocol, IoSession session, Object o) {
+		System.out.println(o);
+	}
+
+	@Override
+	public void onOneThreadMessageSent(SyncBuffPool buffPool,
+			Protocol protocol, IoSession session) {
+		// TODO Auto-generated method stub
+		
+	}
 	
-	private static long time ;
-	@Override
-	public void onSessionOpened(IoSession session) {
-		// TODO Auto-generated method stub
-		
-		if(i.get()==0) time = System.currentTimeMillis();
-		int temp = i.addAndGet(1);
-//		System.out.println("session opend!!!" + temp);
-		if(temp%1000 ==0){
-			System.out.println("connected " + i + "  cost:" + (System.currentTimeMillis() - time));
-		}
-	}
-
-	@Override
-	public void catchException(IoSession session,Throwable e) {
-		// TODO Auto-generated method stub
-//		e.printStackTrace();
-	}
+	
 }

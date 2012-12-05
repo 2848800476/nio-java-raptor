@@ -3,7 +3,7 @@ package cn.com.sparkle.raptor.core.transport.socket.nio;
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
-import cn.com.sparkle.raptor.core.filter.FilterChain;
+import cn.com.sparkle.raptor.core.handler.IoHandler;
 import cn.com.sparkle.raptor.core.session.IoSession;
 
 public class MultNioSocketProcessor {
@@ -15,11 +15,11 @@ public class MultNioSocketProcessor {
             nioSocketProcessors[i] = new NioSocketProcessor(nscfg);
         }
 	}
-    public void addSession(FilterChain filterChain,SocketChannel sc){
+    public void addSession(IoHandler handler,SocketChannel sc){
         currentFlag = (currentFlag+1) % nioSocketProcessors.length;
-        IoSession session = new IoSession(nioSocketProcessors[currentFlag],sc,filterChain);
+        IoSession session = new IoSession(nioSocketProcessors[currentFlag],sc,handler);
         nioSocketProcessors[currentFlag].registerRead(session);
-        filterChain.getHandler().onSessionOpened(session);
+        handler.onSessionOpened(session);
     }
 	
 }
