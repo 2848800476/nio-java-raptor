@@ -6,7 +6,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import cn.com.sparkle.raptor.core.buff.AllocateBytesBuff;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.buff.QuoteBytesBuff;
-import cn.com.sparkle.raptor.core.filter.FilterChain;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
 import cn.com.sparkle.raptor.core.session.IoSession;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketClient;
@@ -31,7 +30,7 @@ class ConnectThread extends Thread{
 	public void run(){
 		try{
 			for(int i =0 ;i < 5000;i++){
-				nc.connect(new InetSocketAddress("127.0.0.1",1234), new FilterChain(new TestClientHandler()));
+				nc.connect(new InetSocketAddress("127.0.0.1",1234), new TestClientHandler());
 //				client.connect(new InetSocketAddress("10.10.83.243",1234), new FilterChain(new TestClientHandler()));
 //				client.connect(new InetSocketAddress("220.181.118.141",1234), new FilterChain(new TestClientHandler()));
 				

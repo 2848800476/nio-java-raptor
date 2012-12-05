@@ -1,12 +1,6 @@
 package cn.com.sparkle.raptor.core.buff;
 
-public class CycleBuff extends AllocateBytesBuff{
-	private CycleQuoteBytesBuffPool pool;
-	public CycleBuff(int capacity,CycleQuoteBytesBuffPool pool) {
-		super(capacity);
-		this.pool = pool;
-	}
-	public void close() {
-		pool.close(this);
-	}
+public interface CycleBuff extends IoBuffer{
+	public void close() ;
+	public BuffPool getPool();
 }

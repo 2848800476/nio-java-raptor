@@ -17,16 +17,23 @@ public class NioSocketConfigure {
 	private int clearTimeoutSessionInterval = 300000;
 	private int trySendNum = 60;
 	private boolean isDaemon = false;
-	private int cycleBuffCellSize = 20000;
+	private int cycleRecieveBuffCellSize = 100000;
+	private int cycleSendBuffCellSize = 100000;
 	
 	
 	
 	
-	public int getCycleBuffCellSize() {
-		return cycleBuffCellSize;
+	public int getCycleRecieveBuffCellSize() {
+		return cycleRecieveBuffCellSize;
 	}
-	public void setCycleBuffCellSize(int cycleBuffCellSize) {
-		this.cycleBuffCellSize = cycleBuffCellSize;
+	public void setCycleRecieveBuffCellSize(int cycleRecieveBuffCellSize) {
+		this.cycleRecieveBuffCellSize = cycleRecieveBuffCellSize;
+	}
+	public int getCycleSendBuffCellSize() {
+		return cycleSendBuffCellSize;
+	}
+	public void setCycleSendBuffCellSize(int cycleSendBuffCellSize) {
+		this.cycleSendBuffCellSize = cycleSendBuffCellSize;
 	}
 	public void setProcessorNum(int processorNum) {
 		this.processorNum = processorNum;

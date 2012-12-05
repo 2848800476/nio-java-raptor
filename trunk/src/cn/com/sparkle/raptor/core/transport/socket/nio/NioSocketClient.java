@@ -6,7 +6,8 @@ import java.nio.channels.SocketChannel;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import cn.com.sparkle.raptor.core.filter.FilterChain;
+import cn.com.sparkle.raptor.core.handler.IoHandler;
+
 
 public class NioSocketClient {
 	private NioSocketConfigure nscfg;
@@ -31,13 +32,13 @@ public class NioSocketClient {
 		sc.socket().setSoTimeout(200);
 		return sc;
 	}
-	public void connect(InetSocketAddress address,FilterChain filterChain) throws Exception{
-		if(filterChain == null || filterChain.getHandler() == null) throw new IOException("filter / filter.handler is not exist");
+	public void connect(InetSocketAddress address,IoHandler handler) throws Exception{
+		if(handler == null) throw new IOException("handler is not exist");
 		SocketChannel sc;
 		try{
 			lock.lock();	
 			sc = getSocketChannel();
-			connector.registerConnector(sc, filterChain);
+			connector.registerConnector(sc, handler);
 			
 		}finally{
 			lock.unlock();

@@ -11,19 +11,17 @@ import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue;
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue.QueueFullException;
 import cn.com.sparkle.raptor.core.delaycheck.DelayChecked;
 import cn.com.sparkle.raptor.core.delaycheck.DelayCheckedTimer;
-import cn.com.sparkle.raptor.core.filter.FilterChain;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
 
 public class NioSocketAccepter {
 	private Selector selector;
-	IoHandler handler;
 	private NioSocketConfigure nscfg;
 	private MultNioSocketProcessor multNioSocketProcessor;
 	private MaximumSizeArrayCycleQueue<QueueBean> waitRegisterQueue = new MaximumSizeArrayCycleQueue<NioSocketAccepter.QueueBean>(100);
 	
 	private class QueueBean{
 		ServerSocketChannel ssc;
-		FilterChain filterChain;
+		IoHandler handler;
 	}
 	public NioSocketAccepter(NioSocketConfigure nscfg) throws IOException{
 		this.nscfg = nscfg;
@@ -33,11 +31,11 @@ public class NioSocketAccepter {
 		t.setDaemon(nscfg.isDaemon());
 		t.start();
 	}
-	public void registerAccept(ServerSocketChannel ssc,FilterChain f) throws IOException, QueueFullException{
-		if(f == null) throw new IOException("FilterChain can't be null");
+	public void registerAccept(ServerSocketChannel ssc,IoHandler handler) throws IOException, QueueFullException{
+		if(handler == null) throw new IOException("handler can't be null");
 		QueueBean qb = new QueueBean();
 		qb.ssc = ssc;
-		qb.filterChain = f;
+		qb.handler = handler;
 		waitRegisterQueue.push(qb);
 		selector.wakeup();
 	}
@@ -49,7 +47,7 @@ public class NioSocketAccepter {
 					
 					QueueBean qb;
 					while((qb = waitRegisterQueue.peek()) != null){
-						qb.ssc.register(selector, SelectionKey.OP_ACCEPT,qb.filterChain);
+						qb.ssc.register(selector, SelectionKey.OP_ACCEPT,qb.handler);
 						waitRegisterQueue.poll();
 					}
 					if(i > 0){
@@ -62,7 +60,7 @@ public class NioSocketAccepter {
 								
 								SocketChannel sc = null;
 								try {
-									FilterChain filterChain = (FilterChain)key.attachment();
+									IoHandler handler = (IoHandler)key.attachment();
 									sc = ((ServerSocketChannel)key.channel()).accept();
 									sc.configureBlocking(false);
 									if(nscfg.getKeepAlive() != null) sc.socket().setKeepAlive(nscfg.getKeepAlive().booleanValue());
@@ -73,7 +71,7 @@ public class NioSocketAccepter {
 									if(nscfg.getSoLinger() != null) sc.socket().setSoLinger(true, nscfg.getSoLinger().intValue());
 									if(nscfg.getTcpNoDelay() != null) sc.socket().setTcpNoDelay(nscfg.getTcpNoDelay().booleanValue());
 									if(nscfg.getTrafficClass() != null) sc.socket().setTrafficClass(nscfg.getTrafficClass().intValue());
-									multNioSocketProcessor.addSession(filterChain, sc);
+									multNioSocketProcessor.addSession(handler, sc);
 								} catch (IOException e) {
 									if(sc != null){
 										try{

@@ -7,7 +7,7 @@ import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.collections.LastAccessTimeLinkedList.Entity;
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue;
 import cn.com.sparkle.raptor.core.collections.Queue;
-import cn.com.sparkle.raptor.core.filter.FilterChain;
+import cn.com.sparkle.raptor.core.handler.IoHandler;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketProcessor;
 import cn.com.sparkle.raptor.core.transport.socket.nio.exception.SessionHavaClosedException;
 import cn.com.sparkle.raptor.core.util.TimeUtil;
@@ -17,28 +17,26 @@ public class IoSession {
 	private SocketChannel channel;
 	private Queue<IoBuffer> waitSendQueue = new MaximumSizeArrayCycleQueue<IoBuffer>(100);
 	private NioSocketProcessor processor;
-	private FilterChain filterChain;
+	private IoHandler handler;
 	private Object attachment;
 	private Entity<IoSession> lastAccessTimeLinkedListwrapSession = null;
 	
 	private volatile boolean isClose = false;
 	
 	
-	public IoSession(NioSocketProcessor processor,SocketChannel channel,FilterChain filterChain){
+	public IoSession(NioSocketProcessor processor,SocketChannel channel,IoHandler handler){
 		this.processor = processor;
 		this.channel = channel;
-		this.filterChain = filterChain;
+		this.handler = handler;
 		this.lastAccessTimeLinkedListwrapSession = new Entity<IoSession>(this);
 	}
 	
-	public FilterChain getFilterChain() {
-		return filterChain;
+	public IoHandler getHandler() {
+		return handler;
 	}
+
 	public long getLastActiveTime() {
 		return lastActiveTime;
-	}
-	public void setFilterChain(FilterChain filterChain) {
-		this.filterChain = filterChain;
 	}
 
 	public SocketChannel getChannel() {
@@ -49,15 +47,17 @@ public class IoSession {
 		if(isClose) throw new SessionHavaClosedException("IoSession have closed!");
 		
 		try{
-			processor.getLock().lock();
+//			processor.getLock().lock();
+			message.getByteBuffer().limit(message.getByteBuffer().position()).position(0);
 			waitSendQueue.push(message);
 			processor.registerWrite(this);
 			return true;
 		}catch(Exception e){
 			return false;
-		}finally{
-			processor.getLock().unlock();
 		}
+//		finally{
+//			processor.getLock().unlock();
+//		}
 	}
 	public void write(IoBuffer message) throws SessionHavaClosedException{
 		while(true){
@@ -65,9 +65,14 @@ public class IoSession {
 				break;
 			}
 			try {
-				Thread.sleep(100);
+				Thread.sleep(10);
 			} catch (InterruptedException e) {
 			}
+		}
+	}
+	public void write(IoBuffer[] message) throws SessionHavaClosedException{
+		for(int i = 0 ; i < message.length ; i++){
+			write(message[i]);
 		}
 	}
 	public Queue<IoBuffer> getWaitSendQueue() {
@@ -87,7 +92,7 @@ public class IoSession {
 				channel.close();
 			} catch (IOException e) {
 			}
-			filterChain.getHandler().onSessionClose(this);
+			handler.onSessionClose(this);
 		}
 	}
 
