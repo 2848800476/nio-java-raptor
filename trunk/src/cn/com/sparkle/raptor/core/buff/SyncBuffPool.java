@@ -25,18 +25,39 @@ public class SyncBuffPool extends CycleAllocateBytesBuffPool{
 	public CycleBuff get() {
 		lock.lock();
 		try{
-			CycleBuff buff = super.get();
+			CycleBuff buff = super.tryGet();
 			if(buff == null){
 				try {
 					empty.await();
 				} catch (InterruptedException e) {
 				}
-				buff = super.get();
+				buff = super.tryGet();
 			}
 			
 			return buff;
 		}finally{
 			lock.unlock();
 		}
+	}
+	@Override
+	public CycleBuffArray get(int byteSize) {
+		lock.lock();
+		try{
+			int size = byteSize / this.getCellCapacity() + (byteSize % this.getCellCapacity() == 0 ? 0 :1);
+			if(this.getTotalCellSize() < size) throw new RuntimeException("this size of need is more than the capacity of pool!you need increase totalCellSize");
+			while(true){
+				if(this.queue.size() < size){
+					try {
+						empty.await();
+					} catch (InterruptedException e) {
+					}
+				}else{
+					return super.get(byteSize);
+				}
+			}
+		}finally{
+			lock.unlock();
+		}
+		
 	}
 }

@@ -15,7 +15,12 @@ public class CycleBuffArray {
 		for(flag = 0 ; flag < cycleBuffArray.length ;flag++){
 			ByteBuffer byteBuffer = cycleBuffArray[flag].getByteBuffer();
 			int canWriteLength = length > byteBuffer.remaining() ? byteBuffer.remaining() : length;
+			try{
 			byteBuffer.put(src, offset, canWriteLength);
+			}catch(java.lang.RuntimeException e){
+				System.out.println(src.length + "  " + offset + "   "+canWriteLength + "   " + byteBuffer.remaining() );
+				throw e;
+			}
 			length -= canWriteLength;
 			if(length == 0) return;
 			offset += canWriteLength;

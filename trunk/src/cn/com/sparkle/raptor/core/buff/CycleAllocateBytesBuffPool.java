@@ -4,10 +4,12 @@ import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue;
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue.QueueFullException;
 
 public class CycleAllocateBytesBuffPool implements BuffPool {
-	public MaximumSizeArrayCycleQueue<CycleBuff> queue;
+	protected MaximumSizeArrayCycleQueue<CycleBuff> queue;
 	private int cellCapacity;
+	private int totalCellSize;
 	public CycleAllocateBytesBuffPool(int totalCellSize,int cellCapacity){
 		this.cellCapacity =  cellCapacity;
+		this.totalCellSize = totalCellSize;
 		queue = new MaximumSizeArrayCycleQueue<CycleBuff>(totalCellSize);
 		
 		for(int i = 0 ; i < totalCellSize ; i++ ){
@@ -32,9 +34,8 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 	}
 	public CycleBuff get(){
 		while(true){
-			CycleBuff buff = queue.peek();
+			CycleBuff buff = tryGet();
 			if(buff != null){
-				queue.poll();
 				return buff;
 			}else{
 				try {
@@ -44,9 +45,17 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 			}
 		}
 	}
+	public CycleBuff tryGet(){
+		CycleBuff buff = queue.peek();
+		if(buff != null){
+			queue.poll();
+			return buff;
+		}else return null;
+	}
 	@Override
 	public CycleBuffArray get(int byteSize) {
 		int size = byteSize / cellCapacity + (byteSize % cellCapacity == 0 ? 0 :1);
+		if(totalCellSize < size) throw new RuntimeException("this size of need is more than the capacity of pool!you need increase totalCellSize");
 		CycleBuff[] buff = new CycleBuff[size];
 		for(int i = 0 ; i < size ; i++){
 			while(true){
@@ -64,4 +73,11 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 		}
 		return new CycleBuffArray(buff);
 	}
+	public int getCellCapacity() {
+		return cellCapacity;
+	}
+	public int getTotalCellSize() {
+		return totalCellSize;
+	}
+	
 }

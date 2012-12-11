@@ -6,6 +6,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
+import java.util.concurrent.locks.ReentrantLock;
 
 import cn.com.sparkle.raptor.core.buff.CycleAllocateBytesBuffPool;
 import cn.com.sparkle.raptor.core.buff.CycleBuff;
@@ -21,7 +22,7 @@ import cn.com.sparkle.raptor.core.util.TimeUtil;
 
 public class NioSocketProcessor {
 	private Selector selector;
-//	private ReentrantLock lock = new ReentrantLock();
+	private ReentrantLock lock = new ReentrantLock();
 
 	private Queue<IoSession> registerQueueWrite = new MaximumSizeArrayCycleQueue<IoSession>(
 			100000);
@@ -61,6 +62,7 @@ public class NioSocketProcessor {
 			}
 		};
 		checkRegisterWrite = new DelayChecked(nscfg.getRegisterWriteDelay()) {
+			
 			@Override
 			public void goToRun() {
 				selector.wakeup();
@@ -84,6 +86,10 @@ public class NioSocketProcessor {
 		DelayCheckedTimer.addDelayCheck(checkTimeoutSession);
 		
 		checkTimeoutSession.needRun();
+	}
+	
+	public ReentrantLock getLock() {
+		return lock;
 	}
 
 	public void registerWrite(IoSession session) {
