@@ -4,6 +4,7 @@ package cn.com.sparkle.raptor.core.protocol.textline;
 import java.nio.ByteBuffer;
 
 
+import cn.com.sparkle.raptor.core.buff.AllocateBytesBuff;
 import cn.com.sparkle.raptor.core.buff.BuffPool;
 import cn.com.sparkle.raptor.core.buff.CycleBuffArray;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
@@ -72,6 +73,17 @@ public class TextLineProtocol implements Protocol{
 		cycleBuffArray.put((byte)0);
 		cycleBuffArray.put((byte)'\r');
 		return cycleBuffArray.getCycleBuffArray();
+		/*
+		IoBuffer[] buff = new IoBuffer[1];
+		buff[0] = new AllocateBytesBuff(1024);
+		for(int i = 0; i < s.length() ; i++){
+			char c = s.charAt(i);
+			buff[0].getByteBuffer().put((byte)(c >> 8));
+			buff[0].getByteBuffer().put((byte)(c & 0xff));
+		}
+		buff[0].getByteBuffer().put((byte)0);
+		buff[0].getByteBuffer().put((byte)'\r');
+		return buff;*/
 	}
 	@Override
 	public void init(ProtecolHandlerAttachment attachment) {

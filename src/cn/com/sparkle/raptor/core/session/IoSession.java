@@ -15,22 +15,23 @@ import cn.com.sparkle.raptor.core.util.TimeUtil;
 public class IoSession {
 	private long lastActiveTime;
 	private SocketChannel channel;
-	private Queue<IoBuffer> waitSendQueue = new MaximumSizeArrayCycleQueue<IoBuffer>(100);
+	private Queue<IoBuffer> waitSendQueue = new MaximumSizeArrayCycleQueue<IoBuffer>(
+			100);
 	private NioSocketProcessor processor;
 	private IoHandler handler;
 	private Object attachment;
 	private Entity<IoSession> lastAccessTimeLinkedListwrapSession = null;
-	
+
 	private volatile boolean isClose = false;
-	
-	
-	public IoSession(NioSocketProcessor processor,SocketChannel channel,IoHandler handler){
+
+	public IoSession(NioSocketProcessor processor, SocketChannel channel,
+			IoHandler handler) {
 		this.processor = processor;
 		this.channel = channel;
 		this.handler = handler;
 		this.lastAccessTimeLinkedListwrapSession = new Entity<IoSession>(this);
 	}
-	
+
 	public IoHandler getHandler() {
 		return handler;
 	}
@@ -43,25 +44,34 @@ public class IoSession {
 		return channel;
 	}
 
-	public boolean tryWrite(IoBuffer message) throws SessionHavaClosedException{
-		if(isClose) throw new SessionHavaClosedException("IoSession have closed!");
+	public boolean tryWrite(IoBuffer message) throws SessionHavaClosedException {
+		// this progress of lock is necessary,because the method tryWrite will
+		// be invoked in many different threads
+
+		if (isClose)
+			throw new SessionHavaClosedException("IoSession have closed!");
+
+		message.getByteBuffer().limit(message.getByteBuffer().position()).position(0);
 		
-		try{
-//			processor.getLock().lock();
-			message.getByteBuffer().limit(message.getByteBuffer().position()).position(0);
+		try {
 			waitSendQueue.push(message);
-			processor.registerWrite(this);
-			return true;
-		}catch(Exception e){
+		} catch (Exception e) {
+			message.getByteBuffer().position(message.getByteBuffer().limit());//if tryWrite false,fix position to next invoking
 			return false;
 		}
-//		finally{
-//			processor.getLock().unlock();
-//		}
+		//notify NioSocketProcessor to register a write action
+		try {
+			processor.getLock().lock();
+			processor.registerWrite(this);
+			return true;
+		} finally {
+			processor.getLock().unlock();
+		}
 	}
-	public void write(IoBuffer message) throws SessionHavaClosedException{
-		while(true){
-			if(tryWrite(message)){
+
+	public void write(IoBuffer message) throws SessionHavaClosedException {
+		while (true) {
+			if (tryWrite(message)) {
 				break;
 			}
 			try {
@@ -70,23 +80,27 @@ public class IoSession {
 			}
 		}
 	}
-	public void write(IoBuffer[] message) throws SessionHavaClosedException{
-		for(int i = 0 ; i < message.length ; i++){
+
+	public void write(IoBuffer[] message) throws SessionHavaClosedException {
+		for (int i = 0; i < message.length; i++) {
 			write(message[i]);
 		}
 	}
+
 	public Queue<IoBuffer> getWaitSendQueue() {
 		return waitSendQueue;
 	}
-	public void attach(Object attachment){
+
+	public void attach(Object attachment) {
 		this.attachment = attachment;
 	}
-	public Object attachment(){
+
+	public Object attachment() {
 		return attachment;
 	}
 
-	public void close(){
-		if(!isClose){
+	public void close() {
+		if (!isClose) {
 			isClose = true;
 			try {
 				channel.close();

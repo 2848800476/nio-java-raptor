@@ -40,7 +40,7 @@ public class TestServerProtocol {
 	
 }
 class TestProtocolHandler implements ProtocolHandler{
-
+	private int i = 0;
 	@Override
 	public void onOneThreadSessionOpen(SyncBuffPool buffPool,
 			Protocol protocol, IoSession session) {
@@ -64,6 +64,13 @@ class TestProtocolHandler implements ProtocolHandler{
 	public void onOneThreadMessageRecieved(SyncBuffPool buffPool,
 			Protocol protocol, IoSession session, Object o) {
 		System.out.println(o);
+		try {
+			IoBuffer[] buffa = protocol.encode(buffPool, "ÄãºÃ£¡Mr client!This is server!" + (++i));
+			session.write(buffa);
+	} catch (SessionHavaClosedException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
 	}
 
 	@Override
