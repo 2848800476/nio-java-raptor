@@ -22,4 +22,17 @@ public class NioSocketServer {
 		accepter.registerAccept(server,handler);
 		System.out.println("raptor listening :" + address.toString());
 	}
+	public void waitToBind(InetSocketAddress address,IoHandler handler) throws IOException{
+		while(true){
+			try {
+				bind(address, handler);
+			} catch (QueueFullException e) {
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e1) {
+				}
+			}
+			break;
+		}
+	}
 }
