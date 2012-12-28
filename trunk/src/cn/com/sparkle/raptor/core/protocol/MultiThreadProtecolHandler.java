@@ -1,7 +1,6 @@
 package cn.com.sparkle.raptor.core.protocol;
 
 import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -19,10 +18,10 @@ public class MultiThreadProtecolHandler implements IoHandler {
 	private Protocol protocol;
 	private ProtocolHandler handler;
 	
-	public MultiThreadProtecolHandler(int totalCellSize,
-			int cellCapacity, int corePoolSize, int maximumPoolSize,
+	public MultiThreadProtecolHandler(int sendBuffTotalCellSize,
+			int sendBuffCellCapacity, int corePoolSize, int maximumPoolSize,
 			long keepAliveTime, TimeUnit unit,Protocol protocol,ProtocolHandler handler) {
-		buffPool = new SyncBuffPool(totalCellSize, cellCapacity);
+		buffPool = new SyncBuffPool(sendBuffTotalCellSize, sendBuffCellCapacity);
 		threadPool = new ThreadPoolExecutor(corePoolSize, maximumPoolSize,
 				keepAliveTime, unit, new LinkedBlockingQueue<Runnable>());
 		this.protocol = protocol;
