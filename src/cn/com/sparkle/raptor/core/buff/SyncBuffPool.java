@@ -40,7 +40,7 @@ public class SyncBuffPool extends CycleAllocateBytesBuffPool{
 		}
 	}
 	@Override
-	public CycleBuffArray get(int byteSize) {
+	public IoBufferArray get(int byteSize) {
 		lock.lock();
 		try{
 			int size = byteSize / this.getCellCapacity() + (byteSize % this.getCellCapacity() == 0 ? 0 :1);
