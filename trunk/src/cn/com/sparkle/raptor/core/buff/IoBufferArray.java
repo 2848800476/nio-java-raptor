@@ -2,18 +2,17 @@ package cn.com.sparkle.raptor.core.buff;
 
 import java.nio.ByteBuffer;
 
-public class CycleBuffArray {
-	private CycleBuff[] cycleBuffArray;
-	private int flag = 0;
-	public CycleBuffArray(CycleBuff[] cycleBuffArray) {
-		this.cycleBuffArray = cycleBuffArray;
+public class IoBufferArray {
+	private IoBuffer[] ioBuffArray;
+	public IoBufferArray(IoBuffer[] ioBuffArray) {
+		this.ioBuffArray = ioBuffArray;
 	}
-	public CycleBuff[] getCycleBuffArray() {
-		return cycleBuffArray;
+	public IoBuffer[] getIoBuffArray() {
+		return ioBuffArray;
 	}
 	public void put(byte[] src,int offset,int length){
-		for(flag = 0 ; flag < cycleBuffArray.length ;flag++){
-			ByteBuffer byteBuffer = cycleBuffArray[flag].getByteBuffer();
+		for(int flag = 0 ; flag < ioBuffArray.length ;flag++){
+			ByteBuffer byteBuffer = ioBuffArray[flag].getByteBuffer();
 			int canWriteLength = length > byteBuffer.remaining() ? byteBuffer.remaining() : length;
 			try{
 			byteBuffer.put(src, offset, canWriteLength);

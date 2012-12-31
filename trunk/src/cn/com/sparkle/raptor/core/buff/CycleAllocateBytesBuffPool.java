@@ -53,7 +53,7 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 		}else return null;
 	}
 	@Override
-	public CycleBuffArray get(int byteSize) {
+	public IoBufferArray get(int byteSize) {
 		int size = byteSize / cellCapacity + (byteSize % cellCapacity == 0 ? 0 :1);
 		if(totalCellSize < size) throw new RuntimeException("this size of need is more than the capacity of pool!you need increase totalCellSize");
 		CycleBuff[] buff = new CycleBuff[size];
@@ -71,7 +71,7 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 				}
 			}
 		}
-		return new CycleBuffArray(buff);
+		return new IoBufferArray(buff);
 	}
 	public int getCellCapacity() {
 		return cellCapacity;

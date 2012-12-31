@@ -4,10 +4,9 @@ package cn.com.sparkle.raptor.core.protocol.textline;
 import java.nio.ByteBuffer;
 
 
-import cn.com.sparkle.raptor.core.buff.AllocateBytesBuff;
 import cn.com.sparkle.raptor.core.buff.BuffPool;
-import cn.com.sparkle.raptor.core.buff.CycleBuffArray;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
+import cn.com.sparkle.raptor.core.buff.IoBufferArray;
 import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler.ProtecolHandlerAttachment;
 import cn.com.sparkle.raptor.core.protocol.Protocol;
 
@@ -64,15 +63,15 @@ public class TextLineProtocol implements Protocol{
 	@Override
 	public IoBuffer[] encode(BuffPool buffpool, Object obj) {
 		String s = (String)obj;
-		CycleBuffArray cycleBuffArray = buffpool.get(s.length() * 2 + 2);
+		IoBufferArray ioBuffArray = buffpool.get(s.length() * 2 + 2);
 		for(int i = 0; i < s.length() ; i++){
 			char c = s.charAt(i);
-			cycleBuffArray.put((byte)(c >> 8));
-			cycleBuffArray.put((byte)(c & 0xff));
+			ioBuffArray.put((byte)(c >> 8));
+			ioBuffArray.put((byte)(c & 0xff));
 		}
-		cycleBuffArray.put((byte)0);
-		cycleBuffArray.put((byte)'\r');
-		return cycleBuffArray.getCycleBuffArray();
+		ioBuffArray.put((byte)0);
+		ioBuffArray.put((byte)'\r');
+		return ioBuffArray.getIoBuffArray();
 		/*
 		IoBuffer[] buff = new IoBuffer[1];
 		buff[0] = new AllocateBytesBuff(1024);
