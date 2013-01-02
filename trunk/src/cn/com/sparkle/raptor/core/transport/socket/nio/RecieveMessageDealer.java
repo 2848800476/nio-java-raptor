@@ -24,7 +24,9 @@ public class RecieveMessageDealer extends Thread {
 			bean = queue.peek();
 			if(bean != null){
 				bean.session.getHandler().onMessageRecieved(bean.session, bean.buff);
-				bean.buff.close();
+				if(!bean.buff.getByteBuffer().hasRemaining()){
+					bean.buff.close();
+				}
 				queue.poll();
 			}else{
 				try {

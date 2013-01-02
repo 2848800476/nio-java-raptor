@@ -5,7 +5,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Test {
 	private static ReentrantLock lock = new ReentrantLock();
-	private static int ii = 25000000;
+	private static long ii = 25000000;
 	private static long time;
 
 	private static class It1 extends Thread {
@@ -37,7 +37,7 @@ public class Test {
 		for (int i = 0; i < canRun.length; i++)
 			canRun[i] = 0;
 	}
-
+	
 	private static class It2 extends Thread {
 		private byte self;
 		private byte opponent;
@@ -76,7 +76,7 @@ public class Test {
 					canRun[self] = 0;
 				}
 			}
-			System.out.println("count:" + count);
+			System.out.println("count:" + count +  "   ii" + ii);
 		}
 	}
 	
@@ -134,8 +134,8 @@ public class Test {
 //		 new It1().start();
 //		 new It1().start();
 
-//		new It2((byte)0, (byte)1).start();
-//		new It2((byte)1, (byte)0).start();
+		new It2((byte)0, (byte)1).start();
+		new It2((byte)1, (byte)0).start();
 //		new It3(1).start();
 //		new It3(2).start();
 		
@@ -153,17 +153,17 @@ public class Test {
 //		System.out.println(b.remaining());
 //		System.out.println(b.capacity());
 //		System.out.println(b.get());
-		String s = "中";
-		byte b1 = (byte) (s.charAt(0) >> 8);
-		byte b2 = (byte)(s.charAt(0) & 0xFF);
-		System.out.println((int)s.charAt(0));
-		System.out.println(b1);
-		System.out.println(b2);
-		System.out.println((char)(b1<<8 | b2));
-		
-		byte[] bs = s.getBytes("utf-8");
-		for(int i = 0 ; i < bs.length ; i++){
-			System.out.println(bs[i]);
-		}
+//		String s = "中";
+//		byte b1 = (byte) (s.charAt(0) >> 8);
+//		byte b2 = (byte)(s.charAt(0) & 0xFF);
+//		System.out.println((int)s.charAt(0));
+//		System.out.println(b1);
+//		System.out.println(b2);
+//		System.out.println((char)(b1<<8 | b2));
+//		
+//		byte[] bs = s.getBytes("utf-8");
+//		for(int i = 0 ; i < bs.length ; i++){
+//			System.out.println(bs[i]);
+//		}
 	}
 }

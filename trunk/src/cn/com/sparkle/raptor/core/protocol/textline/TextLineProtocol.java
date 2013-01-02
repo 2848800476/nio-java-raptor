@@ -17,7 +17,7 @@ public class TextLineProtocol implements Protocol{
 		
 		if(!buff.getByteBuffer().hasRemaining()) return null;//check buff
 		
-		DecodeCache decodeCache = (DecodeCache)attachment.customAttachment;
+		DecodeCache decodeCache = (DecodeCache)attachment.protocolAttachment;
 		
 		char c;
 		//deal cached byte
@@ -58,7 +58,6 @@ public class TextLineProtocol implements Protocol{
 	public static class DecodeCache{
 		private StringBuilder sb = new StringBuilder();
 		private Byte b;
-		public Object customAttachment;
 	} 
 	@Override
 	public IoBuffer[] encode(BuffPool buffpool, Object obj) {
@@ -86,6 +85,6 @@ public class TextLineProtocol implements Protocol{
 	}
 	@Override
 	public void init(ProtecolHandlerAttachment attachment) {
-			attachment.customAttachment = new DecodeCache();
+			attachment.protocolAttachment = new DecodeCache();
 	}
 }
