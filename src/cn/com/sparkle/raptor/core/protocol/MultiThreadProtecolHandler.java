@@ -82,7 +82,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		Do jobDo = new Do() {
 			@Override
 			public void doJob(IoSession session) {
-				handler.onOneThreadSessionOpen(buffPool,protocol,session);
+				handler.onOneThreadSessionOpen(buffPool,protocol,session,(ProtecolHandlerAttachment)session.attachment());
 			}
 		};
 		runOrWaitInQueue(jobDo,session);
@@ -93,7 +93,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		Do jobDo = new Do() {
 			@Override
 			public void doJob(IoSession session) {
-				handler.onOneThreadSessionClose(session);
+				handler.onOneThreadSessionClose(session,(ProtecolHandlerAttachment)session.attachment());
 			}
 		};
 		runOrWaitInQueue(jobDo,session);
@@ -102,15 +102,25 @@ public class MultiThreadProtecolHandler implements IoHandler {
 	public void onMessageRecieved(IoSession session, IoBuffer message) {
 		ProtecolHandlerAttachment attachment = (ProtecolHandlerAttachment) session.attachment();
 		Object obj = null;
-		while((obj = protocol.decode(attachment,message)) != null){
+		while(message.getByteBuffer().hasRemaining() && (obj = protocol.decode(attachment,message)) != null){
 			Do<Object> jobDo = new Do<Object>() {
 				@Override
 				public void doJob(IoSession session) {
-					handler.onOneThreadMessageRecieved(buffPool,protocol,session,o);
+					handler.onOneThreadMessageRecieved(buffPool,protocol,session,o,(ProtecolHandlerAttachment)session.attachment());
 				}
 			};
 			jobDo.o = obj;
 			runOrWaitInQueue(jobDo,session);
+		}
+		if(message.getByteBuffer().hasRemaining()){
+			attachment.unFinishedList.addLast(message);
+		}
+		//clear finished IoBuffer
+		while(attachment.unFinishedList.size() > 0 && !attachment.unFinishedList.getFirst().getByteBuffer().hasRemaining()){
+			if(attachment.unFinishedList.getFirst().getByteBuffer() instanceof CycleBuff){
+				((CycleBuff)attachment.unFinishedList.getFirst().getByteBuffer()).close();
+			}
+			attachment.unFinishedList.removeFirst();
 		}
 	}
 	@Override
@@ -121,13 +131,9 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		Do<IoBuffer> jobDo = new Do<IoBuffer>() {
 			@Override
 			public void doJob(IoSession session) {
-//				if(o instanceof CycleBuff){
-//					buffPool.close((CycleBuff)o);
-//				}
-				handler.onOneThreadMessageSent(buffPool,protocol,session);
+				handler.onOneThreadMessageSent(buffPool,protocol,session,(ProtecolHandlerAttachment)session.attachment());
 			}
 		};
-//		jobDo.o = message;
 		runOrWaitInQueue(jobDo,session);
 	}
 	@Override
@@ -135,7 +141,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		Do<Throwable> jobDo = new Do<Throwable>(){
 			@Override
 			public void doJob(IoSession session) {
-				handler.onOneThreadCatchException(session,o);
+				handler.onOneThreadCatchException(session,(ProtecolHandlerAttachment)session.attachment(),o);
 			}
 		};
 		jobDo.o = e;
@@ -177,15 +183,18 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		}
 	}
 
-	private static abstract class Do<T> {
-		public T o;
-		public abstract void doJob(IoSession session);
-	}
 	public static class ProtecolHandlerAttachment {
-		private LinkedList<Do> jobQueue = new LinkedList<Do>();
+		private LinkedList<Do<Object>> jobQueue = new LinkedList<Do<Object>>();
 		private volatile byte turn;
 		private byte wantLock1 = 0, wantLock2 = 0;
 		private volatile boolean isExecuting = false;
+		private LinkedList<IoBuffer> unFinishedList = new LinkedList<IoBuffer>();
+		public Object protocolAttachment; 
 		public Object customAttachment;
 	}
+	public static abstract class Do<T> {
+		public T o;
+		public abstract void doJob(IoSession session);
+	}
+	
 }

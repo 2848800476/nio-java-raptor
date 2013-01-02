@@ -11,17 +11,17 @@ import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler;
 import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler.ProtecolHandlerAttachment;
 import cn.com.sparkle.raptor.core.protocol.Protocol;
 import cn.com.sparkle.raptor.core.protocol.ProtocolHandler;
-import cn.com.sparkle.raptor.core.protocol.textline.TextLineProtocol;
+import cn.com.sparkle.raptor.core.protocol.javaobject.ObjectProtocol;
 import cn.com.sparkle.raptor.core.session.IoSession;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketClient;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketConfigure;
 import cn.com.sparkle.raptor.core.transport.socket.nio.exception.SessionHavaClosedException;
 
-public class TestClientProtocol {
+public class TestClientObjectProtocol {
 	public static void main(String[] args) throws Exception {
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		NioSocketClient client = new NioSocketClient(nsc);
-		IoHandler handler = new MultiThreadProtecolHandler(1000, 1024, 20, 300, 60, TimeUnit.SECONDS,new TextLineProtocol(), new TestProtocolClientHandler());
+		IoHandler handler = new MultiThreadProtecolHandler(1000, 1024, 20, 300, 60, TimeUnit.SECONDS,new ObjectProtocol(), new TestProtocolObjetClientHandler());
 		for(int i = 0 ; i < 10 ; i++){
 //			client.connect(new InetSocketAddress("10.10.83.243",1234), handler);
 			client.connect(new InetSocketAddress("127.0.0.1",1234),handler );
@@ -29,7 +29,7 @@ public class TestClientProtocol {
 	}
 
 }
-class TestProtocolClientHandler implements ProtocolHandler{
+class TestProtocolObjetClientHandler implements ProtocolHandler{
 	private static AtomicInteger flag = new AtomicInteger(0);
 	private int i = 0;
 	@Override
