@@ -102,18 +102,4 @@ public class ObjectProtocol implements Protocol {
 			}
 		}
 	}
-	public static void main(String[] args) {
-		int i = -12342143;
-		byte[] b = new byte[4];
-		b[0] =(byte)( i >> 24);
-		b[1] = (byte)(i >> 16);
-		b[2] = (byte)(i >> 8);
-		b[3] = (byte)(i);
-
-		for(byte bb :b){
-			System.out.println((int)bb + "  " + ((bb & 0xff) << 8) + "  " + (bb << 8) +"    " + (((long)bb) << 8) );
-		}
-		int r = 0| ((b[0]& 0xff)<< 24) | ((b[1] & 0xff) << 16) | ((b[2] &0xff ) << 8) | (b[3] &0xff);
-		System.out.println(r);
-	}
 }
