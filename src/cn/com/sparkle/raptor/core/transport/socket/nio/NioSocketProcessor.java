@@ -179,7 +179,11 @@ public class NioSocketProcessor {
 										// process.
 						SelectionKey key = session.getChannel()
 								.keyFor(selector);
-						if(key == null && !session.isClose()){
+						if(key == null){
+							if(session.isClose()){
+								registerQueueWrite.poll();
+								continue;
+							}
 							try {
 								
 								key = session.getChannel().register(selector,
