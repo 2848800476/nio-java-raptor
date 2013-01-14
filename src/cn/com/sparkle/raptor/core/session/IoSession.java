@@ -43,7 +43,9 @@ public class IoSession {
 	public SocketChannel getChannel() {
 		return channel;
 	}
-
+	public boolean isClose(){
+		return isClose;
+	}
 	public boolean tryWrite(IoBuffer message) throws SessionHavaClosedException {
 		// this progress of lock is necessary,because the method tryWrite will
 		// be invoked in many different threads
