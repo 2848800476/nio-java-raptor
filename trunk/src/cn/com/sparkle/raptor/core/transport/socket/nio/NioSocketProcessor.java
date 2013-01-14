@@ -144,7 +144,6 @@ public class NioSocketProcessor {
 		}
 	}
 	private boolean interestRead(SelectionKey key, boolean isInterest) {
-		System.out.println("r " + isInterest);
 		int i = key.interestOps();
 		if (isInterest) {
 			if ((i & SelectionKey.OP_READ) == 0) {
@@ -169,7 +168,7 @@ public class NioSocketProcessor {
 			while (true) {
 				int i;
 				try {
-					i = selector.select();
+					i = selector.select(1);
 				} catch (Throwable e) {
 					throw new RuntimeException(e);
 				}

@@ -52,7 +52,7 @@ public class NioSocketConnector {
 			while(true){
 				int i;
 				try{
-					i = selector.select();
+					i = selector.select(1);
 				}catch(Throwable e){
 					throw new RuntimeException(e);
 				}

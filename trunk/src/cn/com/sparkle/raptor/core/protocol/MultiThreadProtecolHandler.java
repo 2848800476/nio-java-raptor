@@ -141,7 +141,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		Do<Throwable> jobDo = new Do<Throwable>(){
 			@Override
 			public void doJob(IoSession session) {
-				handler.onOneThreadCatchException(session,(ProtecolHandlerAttachment)session.attachment(),o);
+				handler.onOneThreadCatchException(session,session != null ?(ProtecolHandlerAttachment)session.attachment():null,o);
 			}
 		};
 		jobDo.o = e;
