@@ -64,7 +64,7 @@ class TestProtocolHandler implements ProtocolHandler{
 	@Override
 	public void onOneThreadMessageRecieved(SyncBuffPool buffPool,
 			Protocol protocol, IoSession session, Object recieveObject,ProtecolHandlerAttachment attachment) {
-		System.out.println(recieveObject);
+//		System.out.println(recieveObject);
 		try {
 			IoBuffer[] buffa = protocol.encode(buffPool, "ÄãºÃ£¡Mr client!This is server!" + (++i));
 			session.write(buffa);

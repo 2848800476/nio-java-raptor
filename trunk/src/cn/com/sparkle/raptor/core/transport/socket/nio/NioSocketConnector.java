@@ -1,7 +1,6 @@
 package cn.com.sparkle.raptor.core.transport.socket.nio;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -15,7 +14,6 @@ import cn.com.sparkle.raptor.core.handler.IoHandler;
 
 public class NioSocketConnector {
 	private Selector selector;
-	IoHandler handler;
 	private MultNioSocketProcessor multNioSocketProcessor;
 	NioSocketConfigure nscfg;
 	private MaximumSizeArrayCycleQueue<QueueBean> waitConnectQueue = new MaximumSizeArrayCycleQueue<NioSocketConnector.QueueBean>(100000);
@@ -23,6 +21,7 @@ public class NioSocketConnector {
 	private class QueueBean{
 		SocketChannel sc;
 		IoHandler handler;
+		Object attachment;
 	}
 	public NioSocketConnector(NioSocketConfigure nscfg) throws IOException{
 		this.nscfg = nscfg;
@@ -40,13 +39,16 @@ public class NioSocketConnector {
 		DelayCheckedTimer.addDelayCheck(checkRegisterConnecter);
 	}
 	public void registerConnector(SocketChannel sc,IoHandler handler) throws Exception{
+		registerConnector(sc, handler,null);
+	}
+	public void registerConnector(SocketChannel sc,IoHandler handler,Object attachment) throws Exception{
 		QueueBean a = new QueueBean();
 		a.handler = handler;
 		a.sc = sc;
+		a.attachment = attachment;
 		waitConnectQueue.push(a);
 		checkRegisterConnecter.needRun();
 	}
-	
 	class Connector implements Runnable{
 		public void run(){
 			while(true){
@@ -60,7 +62,7 @@ public class NioSocketConnector {
 //					long s = System.currentTimeMillis();
 					while((qb = waitConnectQueue.peek()) != null){
 						try {
-							qb.sc.register(selector, SelectionKey.OP_CONNECT,qb.handler);
+							qb.sc.register(selector, SelectionKey.OP_CONNECT,qb);
 						} catch (ClosedChannelException e) {
 							qb.handler.catchException(null, e);
 						}
@@ -77,13 +79,13 @@ public class NioSocketConnector {
 								key.cancel();
 								SocketChannel sc = (SocketChannel) key
 										.channel();
-								IoHandler handler = (IoHandler)key.attachment();
+								qb = (QueueBean)key.attachment();
 								try {
 									if(sc.finishConnect()){
-										multNioSocketProcessor.addSession(handler, sc);
+										multNioSocketProcessor.addSession(qb.handler, sc,qb.attachment);
 									}
 								} catch (Exception e) {
-										handler.catchException(null, e);
+										qb.handler.catchException(null, e);
 									try{
 										sc.close();
 									}catch(Exception ee){}

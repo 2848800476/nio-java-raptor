@@ -45,4 +45,17 @@ public class NioSocketClient {
 		}
 		sc.connect(address);
 	}
+	public void connect(InetSocketAddress address,IoHandler handler,Object attachment) throws Exception{
+		if(handler == null) throw new IOException("handler is not exist");
+		SocketChannel sc;
+		try{
+			lock.lock();	
+			sc = getSocketChannel();
+			connector.registerConnector(sc, handler,attachment);
+			
+		}finally{
+			lock.unlock();
+		}
+		sc.connect(address);
+	}
 }

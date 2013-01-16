@@ -21,10 +21,13 @@ public class TestClientObjectProtocol {
 	public static void main(String[] args) throws Exception {
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		NioSocketClient client = new NioSocketClient(nsc);
+		nsc.setProcessorNum(2);
+		nsc.setCycleRecieveBuffCellSize(10000);
+		nsc.setCycleSendBuffCellSize(10000);
 		IoHandler handler = new MultiThreadProtecolHandler(1000, 1024, 20, 300, 60, TimeUnit.SECONDS,new ObjectProtocol(), new TestProtocolObjetClientHandler());
-		for(int i = 0 ; i < 10 ; i++){
-//			client.connect(new InetSocketAddress("10.10.83.243",1234), handler);
-			client.connect(new InetSocketAddress("127.0.0.1",1234),handler );
+		for(int i = 0 ; i < 1 ; i++){
+//			client.connect(new InetSocketAddress("10.10.83.243",1234), handler,"aaa" + i);
+			client.connect(new InetSocketAddress("127.0.0.1",1234),handler,"aaa" + i );
 		}
 	}
 
@@ -36,10 +39,9 @@ class TestProtocolObjetClientHandler implements ProtocolHandler{
 	public void onOneThreadSessionOpen(SyncBuffPool buffPool,
 			Protocol protocol, IoSession session,ProtecolHandlerAttachment attachment) {
 		try {
-			
+			System.out.println("init attachment:" + attachment.customAttachment);
 //			ProtecolHandlerAttachment att = (ProtecolHandlerAttachment)session.attachment();
 			attachment.customAttachment = Integer.valueOf(flag.addAndGet(1));
-			System.out.println(attachment.customAttachment);
 //			while(true){
 				IoBuffer[] buff = protocol.encode(buffPool, "Hello,Mr server!");
 				session.write(buff);
@@ -60,12 +62,17 @@ class TestProtocolObjetClientHandler implements ProtocolHandler{
 	public void onOneThreadCatchException(IoSession session,ProtecolHandlerAttachment attachment, Throwable e) {
 		e.printStackTrace();
 	}
-
+	private AtomicInteger c = new AtomicInteger(0) ;
+	private long ct = System.currentTimeMillis();
 	@Override
 	public void onOneThreadMessageRecieved(SyncBuffPool buffPool,
 			Protocol protocol, IoSession session, Object o,ProtecolHandlerAttachment attachment) {
-		System.out.println(o);
-		
+//		System.out.println(o);
+		int cc = c.getAndAdd(1);
+		if(cc%1000 == 0){
+			long tt = System.currentTimeMillis() - ct;
+			System.out.println((cc*1000/tt) + "/s");
+		}
 		try {
 				IoBuffer[] buffa = protocol.encode(buffPool, "ÄãºÃ£¡Mr server!This is client" + attachment.customAttachment + "!write package" + (++i));
 				session.write(buffa);

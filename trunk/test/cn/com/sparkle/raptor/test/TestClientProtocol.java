@@ -22,7 +22,7 @@ public class TestClientProtocol {
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		NioSocketClient client = new NioSocketClient(nsc);
 		IoHandler handler = new MultiThreadProtecolHandler(1000, 1024, 20, 300, 60, TimeUnit.SECONDS,new TextLineProtocol(), new TestProtocolClientHandler());
-		for(int i = 0 ; i < 10 ; i++){
+		for(int i = 0 ; i < 1 ; i++){
 //			client.connect(new InetSocketAddress("10.10.83.243",1234), handler);
 			client.connect(new InetSocketAddress("127.0.0.1",1234),handler );
 		}
@@ -60,12 +60,17 @@ class TestProtocolClientHandler implements ProtocolHandler{
 	public void onOneThreadCatchException(IoSession session,ProtecolHandlerAttachment attachment, Throwable e) {
 		e.printStackTrace();
 	}
-
+	private AtomicInteger c = new AtomicInteger(0) ;
+	private long ct = System.currentTimeMillis();
 	@Override
 	public void onOneThreadMessageRecieved(SyncBuffPool buffPool,
 			Protocol protocol, IoSession session, Object o,ProtecolHandlerAttachment attachment) {
-		System.out.println(o);
-		
+//		System.out.println(o);
+		int cc = c.getAndAdd(1);
+		if(cc%10000 == 0){
+			long tt = System.currentTimeMillis() - ct;
+			System.out.println((cc*1000/tt) + "/s");
+		}
 		try {
 				IoBuffer[] buffa = protocol.encode(buffPool, "ÄãºÃ£¡Mr server!This is client" + attachment.customAttachment + "!write package" + (++i));
 				session.write(buffa);

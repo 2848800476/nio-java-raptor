@@ -71,7 +71,7 @@ public class NioSocketAccepter {
 									if(nscfg.getSoLinger() != null) sc.socket().setSoLinger(true, nscfg.getSoLinger().intValue());
 									if(nscfg.getTcpNoDelay() != null) sc.socket().setTcpNoDelay(nscfg.getTcpNoDelay().booleanValue());
 									if(nscfg.getTrafficClass() != null) sc.socket().setTrafficClass(nscfg.getTrafficClass().intValue());
-									multNioSocketProcessor.addSession(handler, sc);
+									multNioSocketProcessor.addSession(handler, sc,null);
 								} catch (IOException e) {
 									if(sc != null){
 										try{

@@ -48,6 +48,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 	public final void onSessionOpened(IoSession session) {
 		
 		ProtecolHandlerAttachment attachment = new ProtecolHandlerAttachment();
+		attachment.customAttachment = session.attachment();
 		session.attach(attachment);
 		protocol.init(attachment);
 		onSessionOpen(session);
