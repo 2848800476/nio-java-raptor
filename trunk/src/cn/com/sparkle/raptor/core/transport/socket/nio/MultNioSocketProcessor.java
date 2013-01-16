@@ -15,12 +15,9 @@ public class MultNioSocketProcessor {
             nioSocketProcessors[i] = new NioSocketProcessor(nscfg);
         }
 	}
-    public void addSession(IoHandler handler,SocketChannel sc,Object initAttachment){
-        currentFlag = (currentFlag+1) % nioSocketProcessors.length;
-        IoSession session = new IoSession(nioSocketProcessors[currentFlag],sc,handler);
-        session.attach(initAttachment);
-        nioSocketProcessors[currentFlag].registerRead(session);
-        handler.onSessionOpened(session);
+    public NioSocketProcessor getProcessor(){
+    	currentFlag = (currentFlag+1) % nioSocketProcessors.length;
+    	return nioSocketProcessors[currentFlag];
     }
 	
 }

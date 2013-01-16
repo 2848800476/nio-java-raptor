@@ -11,6 +11,7 @@ import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue;
 import cn.com.sparkle.raptor.core.delaycheck.DelayChecked;
 import cn.com.sparkle.raptor.core.delaycheck.DelayCheckedTimer;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
+import cn.com.sparkle.raptor.core.session.IoSession;
 
 public class NioSocketConnector {
 	private Selector selector;
@@ -80,12 +81,16 @@ public class NioSocketConnector {
 								SocketChannel sc = (SocketChannel) key
 										.channel();
 								qb = (QueueBean)key.attachment();
+								NioSocketProcessor processor = multNioSocketProcessor.getProcessor();
+								IoSession session = new IoSession(processor,sc,qb.handler);
+								session.attach(qb.attachment);
 								try {
 									if(sc.finishConnect()){
-										multNioSocketProcessor.addSession(qb.handler, sc,qb.attachment);
+								        processor.registerRead(session);
+								        qb.handler.onSessionOpened(session);
 									}
 								} catch (Exception e) {
-										qb.handler.catchException(null, e);
+										qb.handler.catchException(session, e);
 									try{
 										sc.close();
 									}catch(Exception ee){}
