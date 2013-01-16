@@ -27,6 +27,9 @@ public class TestServerObjectProtocol {
 	public static void main(String[] args) throws IOException, QueueFullException {
 		// TODO Auto-generated method stub
 		NioSocketConfigure nsc = new NioSocketConfigure();
+		nsc.setProcessorNum(1);
+		nsc.setCycleRecieveBuffCellSize(10000);
+		nsc.setCycleSendBuffCellSize(10000);
 		//nsc.setSentBuffSize(1024);
 		//nsc.setRevieveBuffSize(1024 * 2048);
 		//nsc.setTcpNoDelay(true);
@@ -60,7 +63,7 @@ class TestObjectProtocolHandler implements ProtocolHandler{
 	@Override
 	public void onOneThreadMessageRecieved(SyncBuffPool buffPool,
 			Protocol protocol, IoSession session, Object recieveObject,ProtecolHandlerAttachment attachment) {
-		System.out.println(recieveObject);
+//		System.out.println(recieveObject);
 		try {
 			IoBuffer[] buffa = protocol.encode(buffPool, "ÄãºÃ£¡Mr client!This is server!" + (++i));
 			session.write(buffa);
