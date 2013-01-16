@@ -12,6 +12,7 @@ import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue.QueueFu
 import cn.com.sparkle.raptor.core.delaycheck.DelayChecked;
 import cn.com.sparkle.raptor.core.delaycheck.DelayCheckedTimer;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
+import cn.com.sparkle.raptor.core.session.IoSession;
 
 public class NioSocketAccepter {
 	private Selector selector;
@@ -71,7 +72,12 @@ public class NioSocketAccepter {
 									if(nscfg.getSoLinger() != null) sc.socket().setSoLinger(true, nscfg.getSoLinger().intValue());
 									if(nscfg.getTcpNoDelay() != null) sc.socket().setTcpNoDelay(nscfg.getTcpNoDelay().booleanValue());
 									if(nscfg.getTrafficClass() != null) sc.socket().setTrafficClass(nscfg.getTrafficClass().intValue());
-									multNioSocketProcessor.addSession(handler, sc,null);
+									
+									
+									NioSocketProcessor processor = multNioSocketProcessor.getProcessor();
+									IoSession session = new IoSession(processor,sc,handler);
+							        processor.registerRead(session);
+							        handler.onSessionOpened(session);
 								} catch (IOException e) {
 									if(sc != null){
 										try{
