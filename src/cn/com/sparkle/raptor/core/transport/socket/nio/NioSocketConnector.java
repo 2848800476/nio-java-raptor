@@ -62,10 +62,13 @@ public class NioSocketConnector {
 					QueueBean qb;
 //					long s = System.currentTimeMillis();
 					while((qb = waitConnectQueue.peek()) != null){
+						NioSocketProcessor processor = multNioSocketProcessor.getProcessor();
+						IoSession session = new IoSession(processor,qb.sc,qb.handler);
+						session.attach(qb.attachment);
 						try {
-							qb.sc.register(selector, SelectionKey.OP_CONNECT,qb);
+							qb.sc.register(selector, SelectionKey.OP_CONNECT,session);
 						} catch (ClosedChannelException e) {
-							qb.handler.catchException(null, e);
+							qb.handler.catchException(session, e);
 						}
 						waitConnectQueue.poll();
 					}
@@ -80,17 +83,14 @@ public class NioSocketConnector {
 								key.cancel();
 								SocketChannel sc = (SocketChannel) key
 										.channel();
-								qb = (QueueBean)key.attachment();
-								NioSocketProcessor processor = multNioSocketProcessor.getProcessor();
-								IoSession session = new IoSession(processor,sc,qb.handler);
-								session.attach(qb.attachment);
+								IoSession session = (IoSession)key.attachment();
 								try {
 									if(sc.finishConnect()){
-								        processor.registerRead(session);
-								        qb.handler.onSessionOpened(session);
+										session.getProcessor().registerRead(session);
+										session.getHandler().onSessionOpened(session);
 									}
 								} catch (Exception e) {
-										qb.handler.catchException(session, e);
+									session.getHandler().catchException(session, e);
 									try{
 										sc.close();
 									}catch(Exception ee){}

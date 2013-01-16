@@ -46,6 +46,9 @@ public class IoSession {
 	public boolean isClose(){
 		return isClose;
 	}
+	public NioSocketProcessor getProcessor(){
+		return processor;
+	}
 	public boolean tryWrite(IoBuffer message) throws SessionHavaClosedException {
 		// this progress of lock is necessary,because the method tryWrite will
 		// be invoked in many different threads
