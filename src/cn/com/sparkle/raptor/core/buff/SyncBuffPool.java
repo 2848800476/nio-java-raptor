@@ -26,7 +26,7 @@ public class SyncBuffPool extends CycleAllocateBytesBuffPool{
 		lock.lock();
 		try{
 			CycleBuff buff = super.tryGet();
-			if(buff == null){
+			while(buff == null){
 				try {
 					empty.await();
 				} catch (InterruptedException e) {
