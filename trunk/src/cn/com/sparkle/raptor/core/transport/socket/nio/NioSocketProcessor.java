@@ -278,7 +278,6 @@ public class NioSocketProcessor {
 									}else if (sendSize == 0) {
 										// 若果当尝试了trySendNum次后发送依然为0,则当前网络压力大或是客户端网络不良造成发送数据堆积
 										// 服务器，此時當前session将进入到等待队列，等候一段时间后重新注册写事件
-										System.out.println("false to write" + buffW.getByteBuffer().hasRemaining());
 										try {
 											reRegisterQueueWrite
 													.push(session);

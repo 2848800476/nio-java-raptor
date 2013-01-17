@@ -9,6 +9,7 @@ import cn.com.sparkle.raptor.core.buff.BuffPool;
 import cn.com.sparkle.raptor.core.buff.CycleBuff;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.buff.SyncBuffPool;
+import cn.com.sparkle.raptor.core.collections.Queue;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
 import cn.com.sparkle.raptor.core.session.IoSession;
 
@@ -91,6 +92,17 @@ public class MultiThreadProtecolHandler implements IoHandler {
 	
 	@Override
 	public void onSessionClose(IoSession session) {
+		
+		
+		//return CycleBuffer to BufferPool
+		Queue<IoBuffer> queue = session.getWaitSendQueue();
+		IoBuffer buff;
+		while((buff = queue.peek()) != null){
+			if(buff instanceof CycleBuff){
+				((CycleBuff)buff).close();
+			}
+		}
+		//activate close event
 		Do jobDo = new Do() {
 			@Override
 			public void doJob(IoSession session) {
