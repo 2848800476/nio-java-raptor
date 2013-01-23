@@ -55,11 +55,13 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		onSessionOpen(session);
 	}
 	private void runOrWaitInQueue(Do jobDo,IoSession session){
-		if(session == null){//if connect refused,the session is null
+		
+		if(!(session.attachment() instanceof ProtecolHandlerAttachment)){//if connect refused,the session.attachment() is not a instance of ProtecolHandlerAttachment
 			jobDo.doJob(session);
 			return;
 		}
 		ProtecolHandlerAttachment attachment = (ProtecolHandlerAttachment) session.attachment();
+		
 		//spin to lock
 				attachment.wantLock1 = 1;
 				attachment.turn = 1;
@@ -154,7 +156,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		Do<Throwable> jobDo = new Do<Throwable>(){
 			@Override
 			public void doJob(IoSession session) {
-				handler.onOneThreadCatchException(session,(ProtecolHandlerAttachment)session.attachment(),o);
+				handler.onOneThreadCatchException(session,session.attachment() instanceof ProtecolHandlerAttachment?(ProtecolHandlerAttachment)session.attachment() : null,o);
 			}
 		};
 		jobDo.o = e;
