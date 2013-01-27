@@ -103,6 +103,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 			if(buff instanceof CycleBuff){
 				((CycleBuff)buff).close();
 			}
+			queue.poll();
 		}
 		//activate close event
 		Do jobDo = new Do() {
