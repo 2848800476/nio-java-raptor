@@ -8,10 +8,10 @@ public class EncodeException extends RuntimeException {
 		super();
 	}
 
-	public EncodeException(String message, Throwable cause,
-			boolean enableSuppression, boolean writableStackTrace) {
-		super(message, cause, enableSuppression, writableStackTrace);
-	}
+//	public EncodeException(String message, Throwable cause,
+//			boolean enableSuppression, boolean writableStackTrace) {
+//		super(message, cause, enableSuppression, writableStackTrace);
+//	}
 
 	public EncodeException(String message, Throwable cause) {
 		super(message, cause);
