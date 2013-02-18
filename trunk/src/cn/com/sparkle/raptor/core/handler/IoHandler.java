@@ -5,8 +5,12 @@ import cn.com.sparkle.raptor.core.session.IoSession;
 
 public interface IoHandler {
 	public void onSessionOpened(IoSession session);
+
 	public void onSessionClose(IoSession session);
-	public void onMessageRecieved(IoSession session,IoBuffer message);
-	public void onMessageSent(IoSession session,IoBuffer message);
-	public void catchException(IoSession session,Throwable e);
+
+	public void onMessageRecieved(IoSession session, IoBuffer message);
+
+	public void onMessageSent(IoSession session, IoBuffer message);
+
+	public void catchException(IoSession session, Throwable e);
 }
