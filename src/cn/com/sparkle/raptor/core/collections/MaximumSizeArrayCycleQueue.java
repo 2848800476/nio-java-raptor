@@ -1,6 +1,5 @@
 package cn.com.sparkle.raptor.core.collections;
 
-
 /*
  * The class is suited to limit the quene size.But the queue can't be resize when the number of elements 
  * in the queue over the maximum size.
@@ -27,15 +26,16 @@ public class MaximumSizeArrayCycleQueue<T> implements Queue<T> {
 		e = 1;
 	}
 
-	public void push(T t) throws QueueFullException{
-		int es = (e+1) & remain;
-		if(es != s){
+	public void push(T t) throws QueueFullException {
+		int es = (e + 1) & remain;
+		if (es != s) {
 			queue[e] = t;
 			e = es;
-		}else{
-			throw new QueueFullException("The queue is full.You should increase the size of the queue.");
+		} else {
+			throw new QueueFullException(
+					"The queue is full.You should increase the size of the queue.");
 		}
-		
+
 	}
 
 	public void poll() {
@@ -54,9 +54,11 @@ public class MaximumSizeArrayCycleQueue<T> implements Queue<T> {
 			return null;
 		}
 	}
-	public int size(){
-		return (e +remain-s) & remain;
+
+	public int size() {
+		return (e + remain - s) & remain;
 	}
+
 	public static class QueueFullException extends Exception {
 		public QueueFullException(String message) {
 			super(message);
@@ -65,7 +67,7 @@ public class MaximumSizeArrayCycleQueue<T> implements Queue<T> {
 
 	public static void main(String[] args) throws QueueFullException,
 			InterruptedException {
-	
+
 		MaximumSizeArrayCycleQueue<Integer> cq = new MaximumSizeArrayCycleQueue<Integer>(
 				100);
 		System.out.println(cq.size());
@@ -75,19 +77,19 @@ public class MaximumSizeArrayCycleQueue<T> implements Queue<T> {
 		System.out.println(cq.size());
 		System.out.println(cq.peek());
 		System.out.println(cq.size());
-		
-//		long time = System.currentTimeMillis();
-//		for (int i = 0; i < 1000000; i++) {
-//			cq.push(i);
-//		}
-//		System.out.println(System.currentTimeMillis() - time);
-//
-//		time = System.currentTimeMillis();
-//		ArrayBlockingQueue<Integer> abq = new ArrayBlockingQueue<Integer>(
-//				1000000);
-//		for (int i = 0; i < 1000000; i++) {
-//			abq.put(i);
-//		}
-//		System.out.println(System.currentTimeMillis() - time);
+
+		// long time = System.currentTimeMillis();
+		// for (int i = 0; i < 1000000; i++) {
+		// cq.push(i);
+		// }
+		// System.out.println(System.currentTimeMillis() - time);
+		//
+		// time = System.currentTimeMillis();
+		// ArrayBlockingQueue<Integer> abq = new ArrayBlockingQueue<Integer>(
+		// 1000000);
+		// for (int i = 0; i < 1000000; i++) {
+		// abq.put(i);
+		// }
+		// System.out.println(System.currentTimeMillis() - time);
 	}
 }

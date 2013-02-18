@@ -20,7 +20,7 @@ public class DelayCheckedTimer {
 		for (DelayChecked d : l) {
 			long t = TimeUtil.currentTimeMillis();
 			if (d.isRun && (t - d.lastCheckTime) > d.delaytime) {
-				if(!d.isCycle){
+				if (!d.isCycle) {
 					d.isRun = false;
 				}
 				d.goToRun();

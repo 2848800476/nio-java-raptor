@@ -11,15 +11,18 @@ import cn.com.sparkle.raptor.core.session.IoSession;
 public class RecieveMessageDealer extends Thread {
 	private MaximumSizeArrayCycleQueue<DealerQueueBean> queue;
 	Selector selector = null;
+
 	public RecieveMessageDealer(int queueSize) {
-		queue = new MaximumSizeArrayCycleQueue<RecieveMessageDealer.DealerQueueBean>(queueSize);
+		queue = new MaximumSizeArrayCycleQueue<RecieveMessageDealer.DealerQueueBean>(
+				queueSize);
 		try {
 			selector = Selector.open();
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
 	}
-	public void register(IoSession session,CycleBuff buff){
+
+	public void register(IoSession session, CycleBuff buff) {
 		try {
 			queue.push(new DealerQueueBean(session, buff));
 			selector.wakeup();
@@ -27,17 +30,19 @@ public class RecieveMessageDealer extends Thread {
 			e.printStackTrace();
 		}
 	}
+
 	@Override
 	public void run() {
 		DealerQueueBean bean;
-		while(true){
+		while (true) {
 			try {
 				selector.select(1);
 				bean = queue.peek();
-				
-				if(bean != null){
-					bean.session.getHandler().onMessageRecieved(bean.session, bean.buff);
-					if(!bean.buff.getByteBuffer().hasRemaining()){
+
+				if (bean != null) {
+					bean.session.getHandler().onMessageRecieved(bean.session,
+							bean.buff);
+					if (!bean.buff.getByteBuffer().hasRemaining()) {
 						bean.buff.close();
 					}
 					queue.poll();
@@ -47,9 +52,11 @@ public class RecieveMessageDealer extends Thread {
 			}
 		}
 	}
-	public static class DealerQueueBean{
+
+	public static class DealerQueueBean {
 		private IoSession session;
 		private CycleBuff buff;
+
 		public DealerQueueBean(IoSession session, CycleBuff buff) {
 			this.session = session;
 			this.buff = buff;

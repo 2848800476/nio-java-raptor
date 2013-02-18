@@ -43,12 +43,15 @@ public class IoSession {
 	public SocketChannel getChannel() {
 		return channel;
 	}
-	public boolean isClose(){
+
+	public boolean isClose() {
 		return isClose;
 	}
-	public NioSocketProcessor getProcessor(){
+
+	public NioSocketProcessor getProcessor() {
 		return processor;
 	}
+
 	public boolean tryWrite(IoBuffer message) throws SessionHavaClosedException {
 		// this progress of lock is necessary,because the method tryWrite will
 		// be invoked in many different threads
@@ -56,15 +59,22 @@ public class IoSession {
 		if (isClose)
 			throw new SessionHavaClosedException("IoSession have closed!");
 
-		message.getByteBuffer().limit(message.getByteBuffer().position()).position(0);
-		
+		message.getByteBuffer().limit(message.getByteBuffer().position())
+				.position(0);
+
 		try {
 			waitSendQueue.push(message);
 		} catch (Exception e) {
-			message.getByteBuffer().position(message.getByteBuffer().limit());//if tryWrite false,fix position to next invoking
+			message.getByteBuffer().position(message.getByteBuffer().limit());// if
+																				// tryWrite
+																				// false,fix
+																				// position
+																				// to
+																				// next
+																				// invoking
 			return false;
 		}
-		//notify NioSocketProcessor to register a write action
+		// notify NioSocketProcessor to register a write action
 		try {
 			processor.getLock().lock();
 			processor.registerWrite(this);

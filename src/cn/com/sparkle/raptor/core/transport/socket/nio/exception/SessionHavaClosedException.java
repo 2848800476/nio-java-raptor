@@ -1,6 +1,6 @@
 package cn.com.sparkle.raptor.core.transport.socket.nio.exception;
 
-public class SessionHavaClosedException extends Exception{
+public class SessionHavaClosedException extends Exception {
 
 	public SessionHavaClosedException() {
 		super();

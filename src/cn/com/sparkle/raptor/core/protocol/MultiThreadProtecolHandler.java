@@ -18,28 +18,32 @@ public class MultiThreadProtecolHandler implements IoHandler {
 	private ThreadPoolExecutor threadPool;
 	private Protocol protocol;
 	private ProtocolHandler handler;
-	
+
 	public MultiThreadProtecolHandler(int sendBuffTotalCellSize,
 			int sendBuffCellCapacity, int corePoolSize, int maximumPoolSize,
-			long keepAliveTime, TimeUnit unit,Protocol protocol,ProtocolHandler handler) {
+			long keepAliveTime, TimeUnit unit, Protocol protocol,
+			ProtocolHandler handler) {
 		buffPool = new SyncBuffPool(sendBuffTotalCellSize, sendBuffCellCapacity);
 		threadPool = new ThreadPoolExecutor(corePoolSize, maximumPoolSize,
 				keepAliveTime, unit, new LinkedBlockingQueue<Runnable>());
 		this.protocol = protocol;
 		this.handler = handler;
-		if(protocol == null){
+		if (protocol == null) {
 			protocol = new Protocol() {
 				@Override
-				public Object decode(ProtecolHandlerAttachment attachment,IoBuffer buff) {
+				public Object decode(ProtecolHandlerAttachment attachment,
+						IoBuffer buff) {
 					return buff;
 				}
+
 				@Override
 				public IoBuffer[] encode(BuffPool Buffpool, Object obj) {
 					return null;
 				}
+
 				@Override
 				public void init(ProtecolHandlerAttachment attachment) {
-					
+
 				}
 			};
 		}
@@ -47,124 +51,149 @@ public class MultiThreadProtecolHandler implements IoHandler {
 
 	@Override
 	public final void onSessionOpened(IoSession session) {
-		
+
 		ProtecolHandlerAttachment attachment = new ProtecolHandlerAttachment();
 		attachment.customAttachment = session.attachment();
 		session.attach(attachment);
 		protocol.init(attachment);
 		onSessionOpen(session);
 	}
-	private void runOrWaitInQueue(Do jobDo,IoSession session){
-		
-		if(!(session.attachment() instanceof ProtecolHandlerAttachment)){//if connect refused,the session.attachment() is not a instance of ProtecolHandlerAttachment
+
+	private void runOrWaitInQueue(Do jobDo, IoSession session) {
+
+		if (!(session.attachment() instanceof ProtecolHandlerAttachment)) {// if
+																			// connect
+																			// refused,the
+																			// session.attachment()
+																			// is
+																			// not
+																			// a
+																			// instance
+																			// of
+																			// ProtecolHandlerAttachment
 			jobDo.doJob(session);
 			return;
 		}
-		ProtecolHandlerAttachment attachment = (ProtecolHandlerAttachment) session.attachment();
-		
-		//spin to lock
-				attachment.wantLock1 = 1;
-				attachment.turn = 1;
-				while (attachment.turn == 1 && attachment.wantLock2 == 1)
-					;
-				try {
-					if (attachment.isExecuting) {
-						// add job to queue
-						attachment.jobQueue.addLast(jobDo);
-					} else {
-						// add job to threadpool
-						attachment.isExecuting = true;
-						threadPool.execute(new JobThread(session, jobDo));
-					}
-				} finally {
-					//release lock
-					attachment.wantLock1 = 0;
-				}
+		ProtecolHandlerAttachment attachment = (ProtecolHandlerAttachment) session
+				.attachment();
+
+		// spin to lock
+		attachment.wantLock1 = 1;
+		attachment.turn = 1;
+		while (attachment.turn == 1 && attachment.wantLock2 == 1)
+			;
+		try {
+			if (attachment.isExecuting) {
+				// add job to queue
+				attachment.jobQueue.addLast(jobDo);
+			} else {
+				// add job to threadpool
+				attachment.isExecuting = true;
+				threadPool.execute(new JobThread(session, jobDo));
+			}
+		} finally {
+			// release lock
+			attachment.wantLock1 = 0;
+		}
 	}
+
 	public void onSessionOpen(IoSession session) {
-		
+
 		Do jobDo = new Do() {
 			@Override
 			public void doJob(IoSession session) {
-				handler.onOneThreadSessionOpen(buffPool,protocol,session,(ProtecolHandlerAttachment)session.attachment());
+				handler.onOneThreadSessionOpen(buffPool, protocol, session,
+						(ProtecolHandlerAttachment) session.attachment());
 			}
 		};
-		runOrWaitInQueue(jobDo,session);
+		runOrWaitInQueue(jobDo, session);
 	}
-	
+
 	@Override
 	public void onSessionClose(IoSession session) {
-		
-		
-		//return CycleBuffer to BufferPool
+
+		// return CycleBuffer to BufferPool
 		Queue<IoBuffer> queue = session.getWaitSendQueue();
 		IoBuffer buff;
-		while((buff = queue.peek()) != null){
-			if(buff instanceof CycleBuff){
-				((CycleBuff)buff).close();
+		while ((buff = queue.peek()) != null) {
+			if (buff instanceof CycleBuff) {
+				((CycleBuff) buff).close();
 			}
 			queue.poll();
 		}
-		//activate close event
+		// activate close event
 		Do jobDo = new Do() {
 			@Override
 			public void doJob(IoSession session) {
-				handler.onOneThreadSessionClose(session,(ProtecolHandlerAttachment)session.attachment());
+				handler.onOneThreadSessionClose(session,
+						(ProtecolHandlerAttachment) session.attachment());
 			}
 		};
-		runOrWaitInQueue(jobDo,session);
+		runOrWaitInQueue(jobDo, session);
 	}
+
 	@Override
 	public void onMessageRecieved(IoSession session, IoBuffer message) {
-		ProtecolHandlerAttachment attachment = (ProtecolHandlerAttachment) session.attachment();
+		ProtecolHandlerAttachment attachment = (ProtecolHandlerAttachment) session
+				.attachment();
 		Object obj = null;
-		while(message.getByteBuffer().hasRemaining() && (obj = protocol.decode(attachment,message)) != null){
+		while (message.getByteBuffer().hasRemaining()
+				&& (obj = protocol.decode(attachment, message)) != null) {
 			Do<Object> jobDo = new Do<Object>() {
 				@Override
 				public void doJob(IoSession session) {
-					handler.onOneThreadMessageRecieved(buffPool,protocol,session,o,(ProtecolHandlerAttachment)session.attachment());
+					handler.onOneThreadMessageRecieved(buffPool, protocol,
+							session, o,
+							(ProtecolHandlerAttachment) session.attachment());
 				}
 			};
 			jobDo.o = obj;
-			runOrWaitInQueue(jobDo,session);
+			runOrWaitInQueue(jobDo, session);
 		}
-		if(message.getByteBuffer().hasRemaining()){
+		if (message.getByteBuffer().hasRemaining()) {
 			attachment.unFinishedList.addLast(message);
 		}
-		//clear finished IoBuffer
-		while(attachment.unFinishedList.size() > 0 && !attachment.unFinishedList.getFirst().getByteBuffer().hasRemaining()){
-			if(attachment.unFinishedList.getFirst().getByteBuffer() instanceof CycleBuff){
-				((CycleBuff)attachment.unFinishedList.getFirst().getByteBuffer()).close();
+		// clear finished IoBuffer
+		while (attachment.unFinishedList.size() > 0
+				&& !attachment.unFinishedList.getFirst().getByteBuffer()
+						.hasRemaining()) {
+			if (attachment.unFinishedList.getFirst().getByteBuffer() instanceof CycleBuff) {
+				((CycleBuff) attachment.unFinishedList.getFirst()
+						.getByteBuffer()).close();
 			}
 			attachment.unFinishedList.removeFirst();
 		}
 	}
+
 	@Override
 	public void onMessageSent(IoSession session, IoBuffer message) {
-		if(message instanceof CycleBuff){
+		if (message instanceof CycleBuff) {
 			((CycleBuff) message).close();
 		}
 		Do<IoBuffer> jobDo = new Do<IoBuffer>() {
 			@Override
 			public void doJob(IoSession session) {
-				handler.onOneThreadMessageSent(buffPool,protocol,session,(ProtecolHandlerAttachment)session.attachment());
+				handler.onOneThreadMessageSent(buffPool, protocol, session,
+						(ProtecolHandlerAttachment) session.attachment());
 			}
 		};
-		runOrWaitInQueue(jobDo,session);
+		runOrWaitInQueue(jobDo, session);
 	}
+
 	@Override
 	public void catchException(IoSession session, Throwable e) {
-		Do<Throwable> jobDo = new Do<Throwable>(){
+		Do<Throwable> jobDo = new Do<Throwable>() {
 			@Override
 			public void doJob(IoSession session) {
-				handler.onOneThreadCatchException(session,session.attachment() instanceof ProtecolHandlerAttachment?(ProtecolHandlerAttachment)session.attachment() : null,o);
+				handler.onOneThreadCatchException(
+						session,
+						session.attachment() instanceof ProtecolHandlerAttachment ? (ProtecolHandlerAttachment) session
+								.attachment() : null, o);
 			}
 		};
 		jobDo.o = e;
-		runOrWaitInQueue(jobDo,session);
+		runOrWaitInQueue(jobDo, session);
 	}
-
-	
 
 	private static class JobThread implements Runnable {
 		private Do jobDo;
@@ -176,23 +205,24 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		}
 
 		public void run() {
-			ProtecolHandlerAttachment attachment = (ProtecolHandlerAttachment) session.attachment();
-			while(true){
+			ProtecolHandlerAttachment attachment = (ProtecolHandlerAttachment) session
+					.attachment();
+			while (true) {
 				jobDo.doJob(session);
-				//spin to lock
+				// spin to lock
 				attachment.wantLock2 = 1;
 				attachment.turn = 2;
 				while (attachment.turn == 2 && attachment.wantLock1 == 1)
 					;
-				try{
-					if(!attachment.jobQueue.isEmpty()){
+				try {
+					if (!attachment.jobQueue.isEmpty()) {
 						jobDo = attachment.jobQueue.removeFirst();
-					}else{
+					} else {
 						attachment.isExecuting = false;
 						break;
 					}
-				}finally{
-					//release lock
+				} finally {
+					// release lock
 					attachment.wantLock2 = 0;
 				}
 			}
@@ -205,12 +235,14 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		private byte wantLock1 = 0, wantLock2 = 0;
 		private volatile boolean isExecuting = false;
 		private LinkedList<IoBuffer> unFinishedList = new LinkedList<IoBuffer>();
-		public Object protocolAttachment; 
+		public Object protocolAttachment;
 		public Object customAttachment;
 	}
+
 	public static abstract class Do<T> {
 		public T o;
+
 		public abstract void doJob(IoSession session);
 	}
-	
+
 }
