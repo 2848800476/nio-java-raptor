@@ -27,7 +27,7 @@ public class TestServerObjectProtocol {
 	public static void main(String[] args) throws IOException, QueueFullException {
 		// TODO Auto-generated method stub
 		NioSocketConfigure nsc = new NioSocketConfigure();
-		nsc.setProcessorNum(1);
+		nsc.setProcessorNum(4);
 		nsc.setCycleRecieveBuffCellSize(10000);
 		nsc.setCycleSendBuffCellSize(10000);
 		//nsc.setSentBuffSize(1024);

@@ -32,7 +32,7 @@ public class NioSocketProcessor {
 			100000);
 	private CycleAllocateBytesBuffPool memPool;
 
-	private RecieveMessageDealer recieveMessageDealer;
+//	private RecieveMessageDealer recieveMessageDealer;
 
 	private LastAccessTimeLinkedList<IoSession> activeSessionLinedLinkedList = new LastAccessTimeLinkedList<IoSession>();
 
@@ -50,10 +50,10 @@ public class NioSocketProcessor {
 		memPool = new CycleAllocateBytesBuffPool(
 				nscfg.getCycleRecieveBuffCellSize(),
 				nscfg.getRevieveBuffSize() * 2 / 3);
-		recieveMessageDealer = new RecieveMessageDealer(
-				nscfg.getCycleRecieveBuffCellSize());
-		recieveMessageDealer.setDaemon(true);
-		recieveMessageDealer.start();
+//		recieveMessageDealer = new RecieveMessageDealer(
+//				nscfg.getCycleRecieveBuffCellSize());
+//		recieveMessageDealer.setDaemon(true);
+//		recieveMessageDealer.start();
 
 		Thread t = new Thread(new Processor());
 		t.setDaemon(true);
@@ -104,7 +104,7 @@ public class NioSocketProcessor {
 				break;
 			} catch (Exception e) {
 				try {
-					Thread.sleep(nscfg.getRegisterWriteDelay());
+					Thread.sleep(10);
 				} catch (InterruptedException e1) {
 				}
 			}
@@ -123,7 +123,7 @@ public class NioSocketProcessor {
 				break;
 			} catch (Exception e) {
 				try {
-					Thread.sleep(nscfg.getRegisterReadDelay());
+					Thread.sleep(10);
 				} catch (InterruptedException e1) {
 				}
 			}
@@ -173,7 +173,7 @@ public class NioSocketProcessor {
 			while (true) {
 				int i;
 				try {
-					i = selector.select(1);
+					i = selector.select(100);
 				} catch (Throwable e) {
 					throw new RuntimeException(e);
 				}
@@ -312,8 +312,13 @@ public class NioSocketProcessor {
 													.limit(buff.getByteBuffer()
 															.position())
 													.position(0);
-											recieveMessageDealer.register(
-													session, buff);
+											session.getHandler().onMessageRecieved(session,
+													buff);
+											if (!buff.getByteBuffer().hasRemaining()) {
+												buff.close();
+											}
+//											recieveMessageDealer.register(
+//													session, buff);
 											buff = memPool.get();
 										}
 									}
@@ -322,8 +327,13 @@ public class NioSocketProcessor {
 												.limit(buff.getByteBuffer()
 														.position())
 												.position(0);
-										recieveMessageDealer.register(session,
+										session.getHandler().onMessageRecieved(session,
 												buff);
+										if (!buff.getByteBuffer().hasRemaining()) {
+											buff.close();
+										}
+//										recieveMessageDealer.register(session,
+//												buff);
 									} else {
 										buff.close();
 									}

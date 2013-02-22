@@ -3,6 +3,7 @@ package cn.com.sparkle.raptor.test;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.buff.SyncBuffPool;
@@ -25,7 +26,7 @@ public class TestClientObjectProtocol {
 		nsc.setCycleRecieveBuffCellSize(10000);
 		nsc.setCycleSendBuffCellSize(10000);
 		IoHandler handler = new MultiThreadProtecolHandler(1000, 1024, 20, 300, 60, TimeUnit.SECONDS,new ObjectProtocol(), new TestProtocolObjetClientHandler());
-		for(int i = 0 ; i < 1 ; i++){
+		for(int i = 0 ; i < 40 ; i++){
 //			client.connect(new InetSocketAddress("10.10.83.243",1234), handler,"aaa" + i);
 			client.connect(new InetSocketAddress("127.0.0.1",1234),handler,"aaa" + i );
 		}
@@ -62,24 +63,33 @@ class TestProtocolObjetClientHandler implements ProtocolHandler{
 	public void onOneThreadCatchException(IoSession session,ProtecolHandlerAttachment attachment, Throwable e) {
 		e.printStackTrace();
 	}
-	private AtomicInteger c = new AtomicInteger(0) ;
+	private int cc = 0 ;
 	private long ct = System.currentTimeMillis();
+	private ReentrantLock lock = new ReentrantLock();
 	@Override
 	public void onOneThreadMessageRecieved(SyncBuffPool buffPool,
 			Protocol protocol, IoSession session, Object o,ProtecolHandlerAttachment attachment) {
 //		System.out.println(o);
-		int cc = c.getAndAdd(1);
-		if(cc%1000 == 0){
-			long tt = System.currentTimeMillis() - ct;
-			System.out.println((cc*1000/tt) + "/s");
-		}
 		try {
-				IoBuffer[] buffa = protocol.encode(buffPool, "ÄãºÃ£¡Mr server!This is client" + attachment.customAttachment + "!write package" + (++i));
-				session.write(buffa);
-		} catch (SessionHavaClosedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			IoBuffer[] buffa = protocol.encode(buffPool, "ÄãºÃ£¡Mr server!This is client" + attachment.customAttachment + "!write package" + (++i));
+			session.write(buffa);
+	} catch (SessionHavaClosedException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+		try{
+			lock.lock();
+			++cc;
+			if(cc%100000 == 0){
+				long tt = System.currentTimeMillis() - ct;
+				System.out.println((cc*1000/tt) + "/s");
+				ct = System.currentTimeMillis();
+				cc = 1;
+			}
+		}finally{
+			lock.unlock();
 		}
+		
 	}
 
 	@Override
