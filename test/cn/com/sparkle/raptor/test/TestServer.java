@@ -24,9 +24,10 @@ public class TestServer {
 	public static void main(String[] args) throws IOException, QueueFullException {
 		// TODO Auto-generated method stub
 		NioSocketConfigure nsc = new NioSocketConfigure();
+		
 		//nsc.setSentBuffSize(1024);
 		//nsc.setRevieveBuffSize(1024 * 2048);
-		//nsc.setTcpNoDelay(true);
+		nsc.setTcpNoDelay(true);
 		NioSocketServer server = new NioSocketServer(nsc);
 		server.bind(new InetSocketAddress(1234),new TestHandler());
 //		server.bind(new InetSocketAddress(12345),new FilterChain(new TestHandler()));
@@ -38,8 +39,15 @@ class TestHandler implements IoHandler{
 	@Override
 	public void onMessageRecieved(IoSession session, IoBuffer message) {
 		
-		System.out.println("recieve");
+		Integer size = (Integer)session.attachment();
+		if(size == null) size = 0;
+		size += message.getByteBuffer().remaining();
+		message.getByteBuffer().position(message.getByteBuffer().limit());
+		session.attach(size);
+		if(size != 1024) return;
+		session.attach(0);
 		IoBuffer temp = new AllocateBytesBuff(1024);
+		temp.getByteBuffer().position(temp.getByteBuffer().limit());
 		try {
 			session.tryWrite(temp);
 		} catch (SessionHavaClosedException e1) {
@@ -51,7 +59,7 @@ class TestHandler implements IoHandler{
 	@Override
 	public void onMessageSent(IoSession session, IoBuffer message) {
 		// TODO Auto-generated method stub
-		System.out.println("message sent");
+//		System.out.println("message sent");
 	}
 
 	@Override
@@ -78,7 +86,7 @@ class TestHandler implements IoHandler{
 
 	@Override
 	public void catchException(IoSession session,Throwable e) {
-		// TODO Auto-generated method stub
-//		e.printStackTrace();
+//		 TODO Auto-generated method stub
+		e.printStackTrace();
 	}
 }
