@@ -33,6 +33,7 @@ public class TestBlockSocketServer {
 			size += is.read(b,size,b.length - size);
 			if(size == b.length) break;
 			}
+			
 			os.write(b);
 			os.flush();
 		}

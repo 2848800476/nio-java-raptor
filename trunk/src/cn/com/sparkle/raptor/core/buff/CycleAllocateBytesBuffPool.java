@@ -15,7 +15,7 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 
 		for (int i = 0; i < totalCellSize; i++) {
 			try {
-				queue.push(new CycleAllocateBuff(this, cellCapacity));
+				queue.push(new CycleAllocateBuff(this, cellCapacity,true));
 			} catch (QueueFullException e) {
 				e.printStackTrace();
 			}

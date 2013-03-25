@@ -22,11 +22,11 @@ public class TestClientObjectProtocol {
 	public static void main(String[] args) throws Exception {
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		NioSocketClient client = new NioSocketClient(nsc);
-		nsc.setProcessorNum(2);
+		nsc.setProcessorNum(1);
 		nsc.setCycleRecieveBuffCellSize(10000);
 		nsc.setCycleSendBuffCellSize(10000);
 		IoHandler handler = new MultiThreadProtecolHandler(1000, 1024, 20, 300, 60, TimeUnit.SECONDS,new ObjectProtocol(), new TestProtocolObjetClientHandler());
-		for(int i = 0 ; i < 40 ; i++){
+		for(int i = 0 ; i < 100 ; i++){
 //			client.connect(new InetSocketAddress("10.10.83.243",1234), handler,"aaa" + i);
 			client.connect(new InetSocketAddress("127.0.0.1",1234),handler,"aaa" + i );
 		}
@@ -71,7 +71,8 @@ class TestProtocolObjetClientHandler implements ProtocolHandler{
 			Protocol protocol, IoSession session, Object o,ProtecolHandlerAttachment attachment) {
 //		System.out.println(o);
 		try {
-			IoBuffer[] buffa = protocol.encode(buffPool, "ÄãºÃ£¡Mr server!This is client" + attachment.customAttachment + "!write package" + (++i));
+			IoBuffer[] buffa = protocol.encode(buffPool, "ÄãºÃ£¡Mr server ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc                                                                                                                                                                                                                                                    !This is client" + attachment.customAttachment + "!write package" + (++i));
+//			System.out.println(buffa[0].getByteBuffer().capacity() - buffa[0].getByteBuffer().remaining());
 			session.write(buffa);
 	} catch (SessionHavaClosedException e) {
 		// TODO Auto-generated catch block
@@ -80,7 +81,7 @@ class TestProtocolObjetClientHandler implements ProtocolHandler{
 		try{
 			lock.lock();
 			++cc;
-			if(cc%100000 == 0){
+			if(cc%10000 == 0){
 				long tt = System.currentTimeMillis() - ct;
 				System.out.println((cc*1000/tt) + "/s");
 				ct = System.currentTimeMillis();

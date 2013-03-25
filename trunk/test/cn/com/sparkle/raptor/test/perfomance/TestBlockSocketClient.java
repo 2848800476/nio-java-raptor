@@ -17,8 +17,8 @@ public class TestBlockSocketClient {
 	 */
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 		Socket s = new Socket();
-//		s.connect(new InetSocketAddress("127.0.0.1", 1234));
-		s.connect(new InetSocketAddress("10.10.83.243", 1234));
+		s.connect(new InetSocketAddress("127.0.0.1", 1234));
+//		s.connect(new InetSocketAddress("10.10.83.243", 1234));
 		s.setTcpNoDelay(true);
 		s.setReceiveBufferSize(2048);
 		s.setSendBufferSize(2048);
@@ -30,20 +30,23 @@ public class TestBlockSocketClient {
 		int cc = 0;
 		byte[] b = new byte[1024];
 		while(true){
-//			oos.writeObject("sdfwefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
 			os.write(b);
 			os.flush();
+			
 			
 			int size = 0;
 			while(true){
 			size += is.read(b,size,b.length - size);
 			if(size == b.length) break;
 			}
-//			ois.readObject();
 			++cc;
+			
 			if(cc%1000 == 0){
-				long tt = System.currentTimeMillis() - ct;
+				long now = System.currentTimeMillis();
+				long tt = now - ct;
 				System.out.println((cc*1000/tt) + "/s");
+				ct = now;
+				cc = 0;
 			}
 			
 		}
