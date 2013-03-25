@@ -30,6 +30,7 @@ public class TestServerObjectProtocol {
 		nsc.setProcessorNum(4);
 		nsc.setCycleRecieveBuffCellSize(10000);
 		nsc.setCycleSendBuffCellSize(10000);
+		nsc.setTcpNoDelay(true);
 		//nsc.setSentBuffSize(1024);
 		//nsc.setRevieveBuffSize(1024 * 2048);
 		//nsc.setTcpNoDelay(true);
@@ -57,7 +58,7 @@ class TestObjectProtocolHandler implements ProtocolHandler{
 	@Override
 	public void onOneThreadCatchException(IoSession session,ProtecolHandlerAttachment attachment, Throwable e) {
 		// TODO Auto-generated method stub
-		
+		e.printStackTrace();
 	}
 
 	@Override

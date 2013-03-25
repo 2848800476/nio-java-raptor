@@ -46,7 +46,7 @@ class TestHandler implements IoHandler{
 		session.attach(size);
 		if(size != 1024) return;
 		session.attach(0);
-		IoBuffer temp = new AllocateBytesBuff(1024);
+		IoBuffer temp = new AllocateBytesBuff(1024,false);
 		temp.getByteBuffer().position(temp.getByteBuffer().limit());
 		try {
 			session.tryWrite(temp);

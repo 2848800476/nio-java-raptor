@@ -33,7 +33,9 @@ public class TestServerProtocol {
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		//nsc.setSentBuffSize(1024);
 		//nsc.setRevieveBuffSize(1024 * 2048);
-		//nsc.setTcpNoDelay(true);
+		nsc.setReuseAddress(true);
+		nsc.setProcessorNum(1);
+		nsc.setTcpNoDelay(true);
 		NioSocketServer server = new NioSocketServer(nsc);
 		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(100000, 1024, 20, 300, 60, TimeUnit.SECONDS,new TextLineProtocol(), new TestProtocolHandler()));
 //		server.bind(new InetSocketAddress(12345),new FilterChain(new TestHandler()));

@@ -8,6 +8,8 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.concurrent.locks.ReentrantLock;
 
+import cn.com.sparkle.raptor.core.buff.AllocateBytesBuff;
+import cn.com.sparkle.raptor.core.buff.CycleAllocateBuff;
 import cn.com.sparkle.raptor.core.buff.CycleAllocateBytesBuffPool;
 import cn.com.sparkle.raptor.core.buff.CycleBuff;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
@@ -178,6 +180,7 @@ public class NioSocketProcessor {
 					throw new RuntimeException(e);
 				}
 				while ((session = (IoSession) registerQueueWrite.peek()) != null) {
+					registerQueueWrite.poll();
 					if (session.getWaitSendQueue().peek() == null)
 						continue;// if peek() return null indicates the
 									// message have proceeded in last send
@@ -185,7 +188,6 @@ public class NioSocketProcessor {
 					SelectionKey key = session.getChannel().keyFor(selector);
 					if (key == null) {
 						if (session.isClose()) {
-							registerQueueWrite.poll();
 							continue;
 						}
 						try {
@@ -193,7 +195,6 @@ public class NioSocketProcessor {
 							key = session.getChannel().register(selector,
 									SelectionKey.OP_WRITE);
 							key.attach(session);
-							registerQueueWrite.poll();
 							activeSessionLinedLinkedList.putOrMoveFirst(session
 									.getLastAccessTimeLinkedListwrapSession());
 						} catch (ClosedChannelException e) {
@@ -205,19 +206,19 @@ public class NioSocketProcessor {
 					} else {
 						key.attach(session);
 						changeInterestWrite(key, true);
-						registerQueueWrite.poll();
 						activeSessionLinedLinkedList.putOrMoveFirst(session
 								.getLastAccessTimeLinkedListwrapSession());
 					}
 				}
 				while ((session = (IoSession) registerQueueRead.peek()) != null) {
 					SelectionKey key = session.getChannel().keyFor(selector);
+					registerQueueRead.poll();
 					if (key == null) {
 						try {
 							key = session.getChannel().register(selector,
 									SelectionKey.OP_READ);
 							key.attach(session);
-							registerQueueRead.poll();
+							
 							activeSessionLinedLinkedList.putOrMoveFirst(session
 									.getLastAccessTimeLinkedListwrapSession());
 						} catch (ClosedChannelException e) {
@@ -228,7 +229,6 @@ public class NioSocketProcessor {
 						}
 					} else {
 						interestRead(key, true);
-						registerQueueRead.poll();
 						activeSessionLinedLinkedList.putOrMoveFirst(session
 								.getLastAccessTimeLinkedListwrapSession());
 					}
@@ -300,7 +300,18 @@ public class NioSocketProcessor {
 
 								CycleBuff buff = null;
 								try {
-									buff = memPool.get();
+									for (int j = 0; j < 100; j++) {
+										if((buff = memPool.tryGet()) != null){
+											break;
+										}
+										try {
+											Thread.sleep(1);
+										} catch (InterruptedException e) {
+										}
+									}
+									if(buff == null){
+										buff = new CycleAllocateBuff(null, 1024, false);
+									}
 									SocketChannel sc = (SocketChannel) key
 											.channel();
 									session = (IoSession) key.attachment();
@@ -350,7 +361,7 @@ public class NioSocketProcessor {
 									throw e;
 								}
 							}
-						} catch (IOException e) {
+						} catch (Exception e) {
 							session.getHandler().catchException(session, e);
 							session.close();
 							activeSessionLinedLinkedList.remove(session

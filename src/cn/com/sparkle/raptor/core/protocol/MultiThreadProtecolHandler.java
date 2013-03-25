@@ -121,6 +121,17 @@ public class MultiThreadProtecolHandler implements IoHandler {
 			}
 			queue.poll();
 		}
+		ProtecolHandlerAttachment attachment = (ProtecolHandlerAttachment) session
+				.attachment();
+		if(attachment != null){
+			while (attachment.unFinishedList.size() > 0) {
+				if (attachment.unFinishedList.getFirst().getByteBuffer() instanceof CycleBuff) {
+					((CycleBuff) attachment.unFinishedList.getFirst()
+							.getByteBuffer()).close();
+				}
+				attachment.unFinishedList.removeFirst();
+			}
+		}
 		// activate close event
 		Do jobDo = new Do() {
 			@Override
@@ -154,12 +165,13 @@ public class MultiThreadProtecolHandler implements IoHandler {
 			attachment.unFinishedList.addLast(message);
 		}
 		// clear finished IoBuffer
+		
 		while (attachment.unFinishedList.size() > 0
 				&& !attachment.unFinishedList.getFirst().getByteBuffer()
 						.hasRemaining()) {
-			if (attachment.unFinishedList.getFirst().getByteBuffer() instanceof CycleBuff) {
+			if (attachment.unFinishedList.getFirst() instanceof CycleBuff) {
 				((CycleBuff) attachment.unFinishedList.getFirst()
-						.getByteBuffer()).close();
+						).close();
 			}
 			attachment.unFinishedList.removeFirst();
 		}
