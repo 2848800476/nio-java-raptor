@@ -50,7 +50,7 @@ public class NioSocketAccepter {
 		public void run() {
 			while (true) {
 				try {
-					int i = selector.select();
+					int i = selector.select(1);
 
 					QueueBean qb;
 					while ((qb = waitRegisterQueue.peek()) != null) {

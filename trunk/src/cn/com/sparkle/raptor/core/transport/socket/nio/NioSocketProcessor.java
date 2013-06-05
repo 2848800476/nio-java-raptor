@@ -175,7 +175,7 @@ public class NioSocketProcessor {
 			while (true) {
 				int i;
 				try {
-					i = selector.select(100);
+					i = selector.select(1);
 				} catch (Throwable e) {
 					throw new RuntimeException(e);
 				}
