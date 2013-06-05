@@ -3,7 +3,7 @@ package cn.com.sparkle.raptor.core.transport.socket.nio;
 public class NioSocketConfigure {
 	private int revieveBuffSize = 2048;
 	private int sentBuffSize = 2048;
-	private boolean tcpNoDelay = true;
+	private boolean tcpNoDelay = false;
 	private boolean keepAlive = true;
 	private boolean oobInline;
 	private Boolean reuseAddress = true;
