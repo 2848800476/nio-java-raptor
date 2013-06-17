@@ -1,7 +1,7 @@
 package cn.com.sparkle.raptor.core.handler;
 
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
-import cn.com.sparkle.raptor.core.session.IoSession;
+import cn.com.sparkle.raptor.core.transport.socket.nio.IoSession;
 
 public interface IoHandler {
 	public void onSessionOpened(IoSession session);

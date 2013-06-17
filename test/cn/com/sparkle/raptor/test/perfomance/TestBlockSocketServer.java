@@ -21,23 +21,28 @@ public class TestBlockSocketServer {
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 		
 		ServerSocket ss = new ServerSocket(1234);
-		Socket s = ss.accept();
-		InputStream is = s.getInputStream();
-		OutputStream os = s.getOutputStream();
-		s.setReceiveBufferSize(2048);
-		s.setSendBufferSize(2048);
-		byte[] b = new byte[1024];
 		while(true){
-			int size = 0;
-			while(true){
-			size += is.read(b,size,b.length - size);
-			if(size == b.length) break;
+			try{
+				Socket s = ss.accept();
+				s.setTcpNoDelay(true);
+				InputStream is = s.getInputStream();
+				OutputStream os = s.getOutputStream();
+				byte[] b = new byte[128*8];
+				while(true){
+					int size = 0;
+					while(true){
+					size += is.read(b,size,b.length - size);
+					if(size == b.length) break;
+					}
+					
+					os.write(b);
+					os.flush();
+				}
+			}catch(Throwable e){
+				e.printStackTrace();
 			}
-			
-			os.write(b);
-			os.flush();
-		}
 		
+		}
 	}
 
 }

@@ -11,7 +11,6 @@ import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue;
 import cn.com.sparkle.raptor.core.delaycheck.DelayChecked;
 import cn.com.sparkle.raptor.core.delaycheck.DelayCheckedTimer;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
-import cn.com.sparkle.raptor.core.session.IoSession;
 
 public class NioSocketConnector {
 	private Selector selector;

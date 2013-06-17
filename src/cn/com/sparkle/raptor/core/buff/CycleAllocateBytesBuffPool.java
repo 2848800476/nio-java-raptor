@@ -1,5 +1,7 @@
 package cn.com.sparkle.raptor.core.buff;
 
+import java.util.concurrent.locks.ReentrantLock;
+
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue;
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue.QueueFullException;
 
@@ -7,7 +9,9 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 	protected MaximumSizeArrayCycleQueue<CycleBuff> queue;
 	private int cellCapacity;
 	private int totalCellSize;
-
+	
+	private ReentrantLock lock = new ReentrantLock();
+	
 	public CycleAllocateBytesBuffPool(int totalCellSize, int cellCapacity) {
 		this.cellCapacity = cellCapacity;
 		this.totalCellSize = totalCellSize;
@@ -25,6 +29,7 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 
 	public void close(CycleBuff buff) {
 		try {
+			lock.lock();
 			if (buff.getPool() != this) {
 				return;
 			}
@@ -32,6 +37,8 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 			queue.push(buff);
 		} catch (QueueFullException e) {
 			e.printStackTrace();
+		}finally{
+			lock.unlock();
 		}
 	}
 
@@ -53,9 +60,8 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 		CycleBuff buff = queue.peek();
 		if (buff != null) {
 			queue.poll();
-			return buff;
-		} else
-			return null;
+		}
+		return buff;
 	}
 
 	@Override
@@ -80,9 +86,12 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 				}
 			}
 		}
+		System.out.println("get size:" + queue.size());
 		return new IoBufferArray(buff);
 	}
-
+	public int size(){
+		return queue.size();
+	}
 	public int getCellCapacity() {
 		return cellCapacity;
 	}

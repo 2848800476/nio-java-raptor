@@ -9,7 +9,7 @@ import cn.com.sparkle.raptor.core.buff.AllocateBytesBuff;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue.QueueFullException;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
-import cn.com.sparkle.raptor.core.session.IoSession;
+import cn.com.sparkle.raptor.core.transport.socket.nio.IoSession;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketConfigure;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketServer;
 import cn.com.sparkle.raptor.core.transport.socket.nio.exception.SessionHavaClosedException;

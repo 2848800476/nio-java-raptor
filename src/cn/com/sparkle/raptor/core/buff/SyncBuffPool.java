@@ -7,10 +7,12 @@ public class SyncBuffPool extends CycleAllocateBytesBuffPool {
 	public SyncBuffPool(int totalCellSize, int cellCapacity) {
 		super(totalCellSize, cellCapacity);
 	}
+	
 
 	private ReentrantLock lock = new ReentrantLock();
 	private Condition empty = lock.newCondition();
-
+	
+	
 	@Override
 	public void close(CycleBuff buff) {
 		lock.lock();

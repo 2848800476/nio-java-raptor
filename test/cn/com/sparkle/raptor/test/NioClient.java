@@ -48,8 +48,8 @@ public class NioClient implements Runnable {
 				SocketChannel sc = SocketChannel.open();
 				sc.configureBlocking(false);
 				// sc.connect(new InetSocketAddress("122.11.54.201",1234));
-				 sc.connect(new InetSocketAddress("127.0.0.1",1234));
-//				sc.connect(new InetSocketAddress("192.168.3.104", 1234));
+//				 sc.connect(new InetSocketAddress("127.0.0.1",1234));
+				sc.connect(new InetSocketAddress("192.168.3.100", 1234));
 				sc.socket().setSoTimeout(0);
 				sc.register(sel, SelectionKey.OP_CONNECT, "" + i);
 			}
@@ -75,17 +75,17 @@ public class NioClient implements Runnable {
 
 							ByteBuffer bb = ByteBuffer.allocate(1024);
 //							 thisSc.read(bb);
-							System.out.println(key.attachment() + " recieve:"
-									+ thisSc.read(bb));
+//							System.out.println(key.attachment() + " recieve:"
+//									+ thisSc.read(bb));
 							//Thread.sleep(50);
 							thisSc.write(ByteBuffer.wrap(new byte[1]));
 						} else if (key.isWritable()) {
 							SocketChannel thisSc = (SocketChannel) key
 									.channel();
-							 System.out.println(key.attachment() + "send" + thisSc.write(ByteBuffer.wrap(new byte[1])));
+							 System.out.println(key.attachment() + "send" + thisSc.write(ByteBuffer.wrap(new byte[1024])));
 							
-							thisSc.register(sel, SelectionKey.OP_READ, key
-									.attachment());
+//							thisSc.register(sel, SelectionKey.OP_READ, key
+//									.attachment());
 						}
 					}
 				}

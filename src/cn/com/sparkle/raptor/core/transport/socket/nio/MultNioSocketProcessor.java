@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
 import cn.com.sparkle.raptor.core.handler.IoHandler;
-import cn.com.sparkle.raptor.core.session.IoSession;
 
 public class MultNioSocketProcessor {
 	NioSocketProcessor[] nioSocketProcessors;

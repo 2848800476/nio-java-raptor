@@ -1,21 +1,26 @@
-package cn.com.sparkle.raptor.core.session;
+package cn.com.sparkle.raptor.core.transport.socket.nio;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.log4j.Logger;
+
+import cn.com.sparkle.raptor.core.buff.CycleBuff;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.collections.LastAccessTimeLinkedList.Entity;
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue;
 import cn.com.sparkle.raptor.core.collections.Queue;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
-import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketProcessor;
 import cn.com.sparkle.raptor.core.transport.socket.nio.exception.SessionHavaClosedException;
 import cn.com.sparkle.raptor.core.util.TimeUtil;
 
 public class IoSession {
+	private final static Logger logger = Logger.getLogger(IoSession.class);
+	
 	private long lastActiveTime;
 	private SocketChannel channel;
-	private Queue<IoBuffer> waitSendQueue = new MaximumSizeArrayCycleQueue<IoBuffer>(
+	private MaximumSizeArrayCycleQueue<IoBuffer> waitSendQueue = new MaximumSizeArrayCycleQueue<IoBuffer>(
 			100);
 	private NioSocketProcessor processor;
 	private IoHandler handler;
@@ -23,6 +28,8 @@ public class IoSession {
 	private Entity<IoSession> lastAccessTimeLinkedListwrapSession = null;
 
 	private volatile boolean isClose = false;
+
+	private AtomicInteger waitSendQueueSize = new AtomicInteger(0);
 
 	public IoSession(NioSocketProcessor processor, SocketChannel channel,
 			IoHandler handler) {
@@ -52,18 +59,25 @@ public class IoSession {
 		return processor;
 	}
 
+	public void suspendRead() {
+		processor.unRegisterRead(this);
+	}
+
+	public void continueRead() {
+		processor.registerRead(this);
+	}
+
 	public boolean tryWrite(IoBuffer message) throws SessionHavaClosedException {
 		// this progress of lock is necessary,because the method tryWrite will
 		// be invoked in many different threads
-
-		if (isClose)
+		if (isClose) {
 			throw new SessionHavaClosedException("IoSession have closed!");
-
+		}
 		message.getByteBuffer().limit(message.getByteBuffer().position())
 				.position(0);
-
 		try {
 			waitSendQueue.push(message);
+			waitSendQueueSize.addAndGet(1);
 		} catch (Exception e) {
 			message.getByteBuffer().position(message.getByteBuffer().limit());// if
 																				// tryWrite
@@ -90,20 +104,41 @@ public class IoSession {
 				break;
 			}
 			try {
-				Thread.sleep(10);
+				Thread.sleep(1);
 			} catch (InterruptedException e) {
 			}
 		}
 	}
 
-	public void write(IoBuffer[] message) throws SessionHavaClosedException {
-		for (int i = 0; i < message.length; i++) {
-			write(message[i]);
+	public IoBuffer getLastButOneSendBuff() {
+		IoBuffer buff = waitSendQueue.last();
+		if (waitSendQueueSize.decrementAndGet() > 0 && buff.getByteBuffer().limit() < buff.getByteBuffer().capacity()) {
+			waitSendQueue.pollLast();
+			buff.getByteBuffer().position(buff.getByteBuffer().limit()).limit(buff.getByteBuffer().capacity());
+			return buff;
+		}else {
+			waitSendQueueSize.addAndGet(1);//fix negative or zero size
+			return null;
+		}
+		
+	}
+
+	public IoBuffer peekWaitSendBuff() {
+		try{
+			int size = waitSendQueueSize.decrementAndGet();
+			if(size <0){
+				return null;
+			}else{
+				return waitSendQueue.peek();
+			}
+		}finally{
+			waitSendQueueSize.addAndGet(1);
 		}
 	}
 
-	public Queue<IoBuffer> getWaitSendQueue() {
-		return waitSendQueue;
+	public void pollWaitSendBuff() {
+		waitSendQueueSize.decrementAndGet();
+		waitSendQueue.poll();
 	}
 
 	public void attach(Object attachment) {
@@ -114,14 +149,18 @@ public class IoSession {
 		return attachment;
 	}
 
-	public void close() {
+	void closeSession() {
 		if (!isClose) {
 			isClose = true;
-			try {
-				channel.close();
-			} catch (IOException e) {
-			}
+			closeSocketChannel();
 			handler.onSessionClose(this);
+		}
+	}
+
+	public void closeSocketChannel() {
+		try {
+			channel.close();
+		} catch (IOException e) {
 		}
 	}
 
