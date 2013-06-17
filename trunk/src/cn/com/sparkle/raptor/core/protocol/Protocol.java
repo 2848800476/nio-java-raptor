@@ -2,10 +2,10 @@ package cn.com.sparkle.raptor.core.protocol;
 
 import cn.com.sparkle.raptor.core.buff.BuffPool;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
-import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler.ProtecolHandlerAttachment;
+import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler.ProtocolHandlerIoSession;
 
 public interface Protocol {
-	public void init(ProtecolHandlerAttachment attachment);
+	public void init(ProtocolHandlerIoSession mySession);
 
 	/**
 	 * Notification: The method may be invoked twice with a single IoBuffer as
@@ -15,8 +15,10 @@ public interface Protocol {
 	 * @param buff
 	 * @return
 	 */
-	public Object decode(ProtecolHandlerAttachment attachment, IoBuffer buff);
+	public Object decode(ProtocolHandlerIoSession mySession, IoBuffer buff);
 
-	public IoBuffer[] encode(BuffPool Buffpool, Object message);
+	public IoBuffer[] encode(BuffPool buffpool, Object message);
+	
+	public IoBuffer[] encode(BuffPool buffpool,Object message,IoBuffer lastWaitSendBuff);
 
 }

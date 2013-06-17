@@ -21,24 +21,7 @@ public class NioSocketClient {
 	private SocketChannel getSocketChannel() throws IOException {
 		SocketChannel sc = SocketChannel.open();
 		sc.configureBlocking(false);
-		if (nscfg.getKeepAlive() != null)
-			sc.socket().setKeepAlive(nscfg.getKeepAlive().booleanValue());
-		if (nscfg.getOobInline() != null)
-			sc.socket().setOOBInline(nscfg.getOobInline().booleanValue());
-		if (nscfg.getReuseAddress() != null)
-			sc.socket().setReuseAddress(nscfg.getReuseAddress().booleanValue());
-		if (nscfg.getRevieveBuffSize() != null)
-			sc.socket().setReceiveBufferSize(
-					nscfg.getRevieveBuffSize().intValue());
-		if (nscfg.getSentBuffSize() != null)
-			sc.socket().setSendBufferSize(nscfg.getSentBuffSize().intValue());
-		if (nscfg.getSoLinger() != null)
-			sc.socket().setSoLinger(true, nscfg.getSoLinger().intValue());
-		if (nscfg.getTcpNoDelay() != null)
-			sc.socket().setTcpNoDelay(nscfg.getTcpNoDelay().booleanValue());
-		if (nscfg.getTrafficClass() != null)
-			sc.socket().setTrafficClass(nscfg.getTrafficClass().intValue());
-		sc.socket().setSoTimeout(200);
+		nscfg.configurateSocket(sc.socket());
 		return sc;
 	}
 
@@ -46,31 +29,33 @@ public class NioSocketClient {
 			throws Exception {
 		if (handler == null)
 			throw new IOException("handler is not exist");
-		SocketChannel sc;
+		SocketChannel sc = getSocketChannel();
+		sc.connect(address);
 		try {
 			lock.lock();
-			sc = getSocketChannel();
+//			sc = getSocketChannel();
 			connector.registerConnector(sc, handler);
 
 		} finally {
 			lock.unlock();
 		}
-		sc.connect(address);
+		
 	}
 
 	public void connect(InetSocketAddress address, IoHandler handler,
 			Object attachment) throws Exception {
 		if (handler == null)
 			throw new IOException("handler is not exist");
-		SocketChannel sc;
+		SocketChannel sc = getSocketChannel();
+		sc.connect(address);
 		try {
 			lock.lock();
-			sc = getSocketChannel();
+//			sc = getSocketChannel();
 			connector.registerConnector(sc, handler, attachment);
 
 		} finally {
 			lock.unlock();
 		}
-		sc.connect(address);
+		
 	}
 }

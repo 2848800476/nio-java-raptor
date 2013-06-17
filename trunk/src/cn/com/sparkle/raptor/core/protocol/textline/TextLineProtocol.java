@@ -5,18 +5,18 @@ import java.nio.ByteBuffer;
 import cn.com.sparkle.raptor.core.buff.BuffPool;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.buff.IoBufferArray;
-import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler.ProtecolHandlerAttachment;
+import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler.ProtocolHandlerIoSession;
 import cn.com.sparkle.raptor.core.protocol.Protocol;
 
 public class TextLineProtocol implements Protocol {
 
 	@Override
-	public Object decode(ProtecolHandlerAttachment attachment, IoBuffer buff) {
+	public Object decode(ProtocolHandlerIoSession session, IoBuffer buff) {
 
 		if (!buff.getByteBuffer().hasRemaining())
 			return null;// check buff
 
-		DecodeCache decodeCache = (DecodeCache) attachment.protocolAttachment;
+		DecodeCache decodeCache = (DecodeCache) session.protocolAttachment;
 
 		char c;
 		// deal cached byte
@@ -64,9 +64,29 @@ public class TextLineProtocol implements Protocol {
 	}
 
 	@Override
-	public IoBuffer[] encode(BuffPool buffpool, Object obj) {
-		String s = (String) obj;
-		IoBufferArray ioBuffArray = buffpool.get(s.length() * 2 + 2);
+	public IoBuffer[] encode(BuffPool buffpool, Object message) {
+		return encode(buffpool,message,null);
+	}
+
+	@Override
+	public void init(ProtocolHandlerIoSession session) {
+		session.protocolAttachment = new DecodeCache();
+	}
+
+	@Override
+	public IoBuffer[] encode(BuffPool buffpool, Object message,
+			IoBuffer lastWaitSendBuff) {
+		String s = (String) message;
+		IoBufferArray ioBuffArray;
+		if(lastWaitSendBuff != null){
+			IoBufferArray newBuffArray = buffpool.get(s.length() * 2 + 2 - lastWaitSendBuff.getByteBuffer().remaining());
+			IoBuffer[] ioBuffer = new IoBuffer[newBuffArray.getIoBuffArray().length + 1];
+			ioBuffer[0] = lastWaitSendBuff;
+			System.arraycopy(newBuffArray.getIoBuffArray(), 0, ioBuffer, 1, newBuffArray.getIoBuffArray().length);
+			ioBuffArray = new IoBufferArray(ioBuffer);
+		}else{
+			ioBuffArray = buffpool.get(s.length() * 2 + 2);
+		}
 		for (int i = 0; i < s.length(); i++) {
 			char c = s.charAt(i);
 			ioBuffArray.put((byte) (c >> 8));
@@ -75,18 +95,5 @@ public class TextLineProtocol implements Protocol {
 		ioBuffArray.put((byte) 0);
 		ioBuffArray.put((byte) '\r');
 		return ioBuffArray.getIoBuffArray();
-		/*
-		 * IoBuffer[] buff = new IoBuffer[1]; buff[0] = new
-		 * AllocateBytesBuff(1024); for(int i = 0; i < s.length() ; i++){ char c
-		 * = s.charAt(i); buff[0].getByteBuffer().put((byte)(c >> 8));
-		 * buff[0].getByteBuffer().put((byte)(c & 0xff)); }
-		 * buff[0].getByteBuffer().put((byte)0);
-		 * buff[0].getByteBuffer().put((byte)'\r'); return buff;
-		 */
-	}
-
-	@Override
-	public void init(ProtecolHandlerAttachment attachment) {
-		attachment.protocolAttachment = new DecodeCache();
 	}
 }

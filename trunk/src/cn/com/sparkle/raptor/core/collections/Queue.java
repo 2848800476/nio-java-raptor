@@ -6,4 +6,5 @@ public interface Queue<T> {
 	public T peek();
 
 	public void push(T obj) throws Exception;
+	
 }

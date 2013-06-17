@@ -7,14 +7,17 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 
+import org.apache.log4j.Logger;
+
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue;
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue.QueueFullException;
 import cn.com.sparkle.raptor.core.delaycheck.DelayChecked;
 import cn.com.sparkle.raptor.core.delaycheck.DelayCheckedTimer;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
-import cn.com.sparkle.raptor.core.session.IoSession;
 
 public class NioSocketAccepter {
+	
+	private final static Logger logger = Logger.getLogger(NioSocketAccepter.class);
 	private Selector selector;
 	private NioSocketConfigure nscfg;
 	private MultNioSocketProcessor multNioSocketProcessor;
@@ -74,44 +77,14 @@ public class NioSocketAccepter {
 									sc = ((ServerSocketChannel) key.channel())
 											.accept();
 									sc.configureBlocking(false);
-									if (nscfg.getKeepAlive() != null)
-										sc.socket().setKeepAlive(
-												nscfg.getKeepAlive()
-														.booleanValue());
-									if (nscfg.getOobInline() != null)
-										sc.socket().setOOBInline(
-												nscfg.getOobInline()
-														.booleanValue());
-									if (nscfg.getReuseAddress() != null)
-										sc.socket().setReuseAddress(
-												nscfg.getReuseAddress()
-														.booleanValue());
-									if (nscfg.getRevieveBuffSize() != null)
-										sc.socket().setReceiveBufferSize(
-												nscfg.getRevieveBuffSize()
-														.intValue());
-									if (nscfg.getSentBuffSize() != null)
-										sc.socket().setSendBufferSize(
-												nscfg.getSentBuffSize()
-														.intValue());
-									if (nscfg.getSoLinger() != null)
-										sc.socket().setSoLinger(true,
-												nscfg.getSoLinger().intValue());
-									if (nscfg.getTcpNoDelay() != null)
-										sc.socket().setTcpNoDelay(
-												nscfg.getTcpNoDelay()
-														.booleanValue());
-									if (nscfg.getTrafficClass() != null)
-										sc.socket().setTrafficClass(
-												nscfg.getTrafficClass()
-														.intValue());
+									nscfg.configurateSocket(sc.socket());
 
 									NioSocketProcessor processor = multNioSocketProcessor
 											.getProcessor();
 									IoSession session = new IoSession(
 											processor, sc, handler);
-									processor.registerRead(session);
 									handler.onSessionOpened(session);
+									processor.registerRead(session);
 								} catch (IOException e) {
 									if (sc != null) {
 										try {

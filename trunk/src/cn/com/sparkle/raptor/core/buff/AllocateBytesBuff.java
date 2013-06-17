@@ -4,7 +4,10 @@ import java.nio.ByteBuffer;
 
 public class AllocateBytesBuff extends AbstractIoBuffer {
 	public AllocateBytesBuff(int capacity,boolean isDirectMem) {
-//		bb = ByteBuffer.allocate(capacity);
-		bb = ByteBuffer.allocateDirect(capacity);
+		if(!isDirectMem){
+			bb = ByteBuffer.allocate(capacity);
+		}else{
+			bb = ByteBuffer.allocateDirect(capacity);
+		}
 	}
 }

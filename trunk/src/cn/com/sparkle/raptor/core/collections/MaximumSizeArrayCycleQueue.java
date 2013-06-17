@@ -58,7 +58,22 @@ public class MaximumSizeArrayCycleQueue<T> implements Queue<T> {
 	public int size() {
 		return (e + remain - s) & remain;
 	}
-
+	
+	public T last(){
+		int es = (e + remain) & remain;
+		if(es == s){
+			return null;
+		}else{
+			return (T)queue[es];
+		}
+	}
+	public void pollLast() {
+		int es = (e + remain) & remain;
+		if(es != s){
+			queue[es] = null;
+			e = es;
+		}
+	}
 	public static class QueueFullException extends Exception {
 		public QueueFullException(String message) {
 			super(message);
@@ -69,14 +84,47 @@ public class MaximumSizeArrayCycleQueue<T> implements Queue<T> {
 			InterruptedException {
 
 		MaximumSizeArrayCycleQueue<Integer> cq = new MaximumSizeArrayCycleQueue<Integer>(
-				100);
-		System.out.println(cq.size());
-		cq.push(1);
-		System.out.println(cq.size());
-		cq.poll();
-		System.out.println(cq.size());
+				
+				10);
+		for(int i = 0 ; i < 5 ; i ++){
+			cq.push(1);
+			cq.poll();
+		}
+//		cq.push(1);
+//		cq.push(2);
+//		cq.push(3);
+		for(int i = 0 ;i < 10 ; i++){
+			cq.push(i);
+		}
+		System.out.println(cq.last());
+		cq.pollLast();
 		System.out.println(cq.peek());
-		System.out.println(cq.size());
+		cq.poll();
+		
+		System.out.println(cq.last());
+		cq.pollLast();
+		System.out.println(cq.last());
+		cq.pollLast();
+		
+		System.out.println(cq.peek());
+		cq.poll();
+		/*
+		for(int i = 0 ; i < 1000 ; i++){
+			System.out.println("test");
+			cq.push(i);
+			System.out.println(cq.last());
+			cq.pollLast();
+			System.out.println(cq.last());
+			System.out.println("size:" + cq.size());
+		}*/
+//		
+//		System.out.println(cq.size());
+//		cq.push(1);
+//		System.out.println(cq.size());
+//		cq.poll();
+//		System.out.println(cq.size());
+//		System.out.println(cq.peek());
+//		System.out.println(cq.size());
 
 		// long time = System.currentTimeMillis();
 		// for (int i = 0; i < 1000000; i++) {
@@ -92,4 +140,5 @@ public class MaximumSizeArrayCycleQueue<T> implements Queue<T> {
 		// }
 		// System.out.println(System.currentTimeMillis() - time);
 	}
+
 }

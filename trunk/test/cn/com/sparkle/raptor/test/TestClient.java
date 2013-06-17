@@ -8,7 +8,7 @@ import cn.com.sparkle.raptor.core.buff.AllocateBytesBuff;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.buff.QuoteBytesBuff;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
-import cn.com.sparkle.raptor.core.session.IoSession;
+import cn.com.sparkle.raptor.core.transport.socket.nio.IoSession;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketClient;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketConfigure;
 import cn.com.sparkle.raptor.core.transport.socket.nio.exception.SessionHavaClosedException;
@@ -17,6 +17,7 @@ public class TestClient {
 	public static void main(String[] args) throws Exception {
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		nsc.setTcpNoDelay(true);
+		nsc.setSoTimeOut(1000*30);
 		NioSocketClient client = new NioSocketClient(nsc);
 		for(int i = 0 ; i < 1 ; i++){
 			Thread t = new ConnectThread(client);
@@ -31,8 +32,9 @@ class ConnectThread extends Thread{
 	}
 	public void run(){
 		try{
-			for(int i =0 ;i < 1;i++){
-				nc.connect(new InetSocketAddress("127.0.0.1",1234), new TestClientHandler());
+			for(int i =0 ;i < 1000;i++){
+//				nc.connect(new InetSocketAddress("127.0.0.1",1234), new TestClientHandler());
+				nc.connect(new InetSocketAddress("192.168.3.100",1234), new TestClientHandler());
 //				nc.connect(new InetSocketAddress("10.10.83.243",1234), new TestClientHandler());
 //				client.connect(new InetSocketAddress("220.181.118.141",1234), new FilterChain(new TestClientHandler()));
 				
@@ -52,34 +54,34 @@ class TestClientHandler implements IoHandler {
 	@Override
 	public void onMessageRecieved(IoSession session, IoBuffer message) {
 //		System.out.println("client recieve");
-		Integer size = (Integer)session.attachment();
-		if(size == null) size = 0;
-		size += message.getByteBuffer().remaining();
-		message.getByteBuffer().position(message.getByteBuffer().limit());
-		session.attach(size);
-		if(size != 1024) return;
-		
-		session.attach(0);
-		IoBuffer temp = new AllocateBytesBuff(1024,false);
-		temp.getByteBuffer().position(temp.getByteBuffer().limit());
-		try {
-			session.tryWrite(temp);
-		} catch (SessionHavaClosedException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-		try{
-			lock.lock();
-			++cc;
-			if(cc%1000 == 0){
-				long tt = System.currentTimeMillis() - ct;
-				System.out.println((cc*1000/tt) + "/s");
-				ct = System.currentTimeMillis();
-				cc = 1;
-			}
-		}finally{
-			lock.unlock();
-		}
+//		Integer size = (Integer)session.attachment();
+//		if(size == null) size = 0;
+//		size += message.getByteBuffer().remaining();
+//		message.getByteBuffer().position(message.getByteBuffer().limit());
+//		session.attach(size);
+//		if(size != 1024) return;
+//		
+//		session.attach(0);
+//		IoBuffer temp = new AllocateBytesBuff(1024,false);
+//		temp.getByteBuffer().position(temp.getByteBuffer().limit());
+//		try {
+//			session.tryWrite(temp);
+//		} catch (SessionHavaClosedException e1) {
+//			// TODO Auto-generated catch block
+//			e1.printStackTrace();
+//		}
+//		try{
+//			lock.lock();
+//			++cc;
+//			if(cc%1000 == 0){
+//				long tt = System.currentTimeMillis() - ct;
+//				System.out.println((cc*1000/tt) + "/s");
+//				ct = System.currentTimeMillis();
+//				cc = 1;
+//			}
+//		}finally{
+//			lock.unlock();
+//		}
 		
 	}
 
@@ -103,15 +105,15 @@ class TestClientHandler implements IoHandler {
 		}
 		
 		IoBuffer iobuffer = new QuoteBytesBuff(buff, 0, buff.length);
-		System.out.println("session open");
+//		System.out.println("session open");
 		iobuffer.getByteBuffer().position(iobuffer.getByteBuffer().limit());
-		System.out.println(iobuffer.getByteBuffer().remaining());
-		
-		try {
-			session.tryWrite(iobuffer);
-		} catch (SessionHavaClosedException e) {
-			e.printStackTrace();
-		}
+//		System.out.println(iobuffer.getByteBuffer().remaining());
+//		
+//		try {
+//			session.tryWrite(iobuffer);
+//		} catch (SessionHavaClosedException e) {
+//			e.printStackTrace();
+//		}
 //		A a = new A();
 //		a.session = session;
 //		a.start();
