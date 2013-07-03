@@ -27,26 +27,37 @@ public class TestServer {
 		
 		//nsc.setSentBuffSize(1024);
 		//nsc.setRevieveBuffSize(1024 * 2048);
+		nsc.setReuseAddress(true);
 		nsc.setTcpNoDelay(true);
+		nsc.setProcessorNum(2);
+		
 		NioSocketServer server = new NioSocketServer(nsc);
 		server.bind(new InetSocketAddress(1234),new TestHandler());
 //		server.bind(new InetSocketAddress(12345),new FilterChain(new TestHandler()));
 	}
 	
 }
+
 class TestHandler implements IoHandler{
 	public static AtomicInteger i = new AtomicInteger(0);
+	byte[] b = new byte[128];
 	@Override
 	public void onMessageRecieved(IoSession session, IoBuffer message) {
 		
-		Integer size = (Integer)session.attachment();
-		if(size == null) size = 0;
-		size += message.getByteBuffer().remaining();
+		
+//		Integer size = (Integer)session.attachment();
+//		if(size == null) size = 0;
+//		size += message.getByteBuffer().remaining();
+//		message.getByteBuffer().position(message.getByteBuffer().limit());
+//		session.attach(size);
+//		if(size != 128) return;
+//		session.attach(0);
+//		
+//		IoBuffer temp = new AllocateBytesBuff(128,false);
+//		temp.getByteBuffer().position(temp.getByteBuffer().limit());
+		
+		IoBuffer temp = new AllocateBytesBuff(message.getByteBuffer().remaining(),false);
 		message.getByteBuffer().position(message.getByteBuffer().limit());
-		session.attach(size);
-		if(size != 1024) return;
-		session.attach(0);
-		IoBuffer temp = new AllocateBytesBuff(1024,false);
 		temp.getByteBuffer().position(temp.getByteBuffer().limit());
 		try {
 			session.tryWrite(temp);
@@ -54,6 +65,12 @@ class TestHandler implements IoHandler{
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
+//		try {
+//			session.getChannel().write(ByteBuffer.wrap(b));
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 	}
 
 	@Override

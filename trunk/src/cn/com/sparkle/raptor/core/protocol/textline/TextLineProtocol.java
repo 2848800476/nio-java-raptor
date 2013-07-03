@@ -1,10 +1,13 @@
 package cn.com.sparkle.raptor.core.protocol.textline;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import cn.com.sparkle.raptor.core.buff.BuffPool;
+import cn.com.sparkle.raptor.core.buff.BuffPool.PoolEmptyException;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.buff.IoBufferArray;
+import cn.com.sparkle.raptor.core.protocol.EncodeException;
 import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler.ProtocolHandlerIoSession;
 import cn.com.sparkle.raptor.core.protocol.Protocol;
 
@@ -64,7 +67,7 @@ public class TextLineProtocol implements Protocol {
 	}
 
 	@Override
-	public IoBuffer[] encode(BuffPool buffpool, Object message) {
+	public IoBuffer[] encode(BuffPool buffpool, Object message) throws IOException {
 		return encode(buffpool,message,null);
 	}
 
@@ -75,17 +78,28 @@ public class TextLineProtocol implements Protocol {
 
 	@Override
 	public IoBuffer[] encode(BuffPool buffpool, Object message,
-			IoBuffer lastWaitSendBuff) {
+			IoBuffer lastWaitSendBuff) throws IOException{
 		String s = (String) message;
+		IoBufferArray newBuffArray;
+		
 		IoBufferArray ioBuffArray;
 		if(lastWaitSendBuff != null){
-			IoBufferArray newBuffArray = buffpool.get(s.length() * 2 + 2 - lastWaitSendBuff.getByteBuffer().remaining());
+			newBuffArray = buffpool.tryGet(s.length() * 2 + 2 - lastWaitSendBuff.getByteBuffer().remaining());
+			
+		}else{
+			newBuffArray = buffpool.tryGet(s.length() * 2 + 2);
+		}
+		if(newBuffArray == null){
+			throw new PoolEmptyException();
+		}
+		
+		if(lastWaitSendBuff != null){
 			IoBuffer[] ioBuffer = new IoBuffer[newBuffArray.getIoBuffArray().length + 1];
 			ioBuffer[0] = lastWaitSendBuff;
 			System.arraycopy(newBuffArray.getIoBuffArray(), 0, ioBuffer, 1, newBuffArray.getIoBuffArray().length);
 			ioBuffArray = new IoBufferArray(ioBuffer);
 		}else{
-			ioBuffArray = buffpool.get(s.length() * 2 + 2);
+			ioBuffArray = newBuffArray;
 		}
 		for (int i = 0; i < s.length(); i++) {
 			char c = s.charAt(i);
@@ -94,6 +108,6 @@ public class TextLineProtocol implements Protocol {
 		}
 		ioBuffArray.put((byte) 0);
 		ioBuffArray.put((byte) '\r');
-		return ioBuffArray.getIoBuffArray();
+		return newBuffArray.getIoBuffArray();
 	}
 }

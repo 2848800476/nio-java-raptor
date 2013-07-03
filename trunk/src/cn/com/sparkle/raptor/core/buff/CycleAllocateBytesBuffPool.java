@@ -15,7 +15,7 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 	public CycleAllocateBytesBuffPool(int totalCellSize, int cellCapacity) {
 		this.cellCapacity = cellCapacity;
 		this.totalCellSize = totalCellSize;
-		queue = new MaximumSizeArrayCycleQueue<CycleBuff>(totalCellSize);
+		queue = new MaximumSizeArrayCycleQueue<CycleBuff>(CycleBuff.class,totalCellSize);
 
 		for (int i = 0; i < totalCellSize; i++) {
 			try {
@@ -42,19 +42,6 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 		}
 	}
 
-	public CycleBuff get() {
-		while (true) {
-			CycleBuff buff = tryGet();
-			if (buff != null) {
-				return buff;
-			} else {
-				try {
-					Thread.sleep(1);
-				} catch (InterruptedException e) {
-				}
-			}
-		}
-	}
 
 	public CycleBuff tryGet() {
 		CycleBuff buff = queue.peek();
@@ -65,12 +52,17 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 	}
 
 	@Override
-	public IoBufferArray get(int byteSize) {
+	public IoBufferArray tryGet(int byteSize) {
 		int size = byteSize / cellCapacity
 				+ (byteSize % cellCapacity == 0 ? 0 : 1);
-		if (totalCellSize < size)
+		if (totalCellSize < size){
 			throw new RuntimeException(
 					"this size of need is more than the capacity of pool!you need increase totalCellSize");
+		}
+		if(queue.size() < size){
+			return null;
+		}
+		
 		CycleBuff[] buff = new CycleBuff[size];
 		for (int i = 0; i < size; i++) {
 			while (true) {
@@ -79,14 +71,17 @@ public class CycleAllocateBytesBuffPool implements BuffPool {
 					queue.poll();
 					break;
 				} else {
-					try {
-						Thread.sleep(1);
-					} catch (InterruptedException e) {
+					for(i-=1;i>=0;--i){
+						try {
+							queue.push(buff[i]);
+						} catch (QueueFullException e) {
+							throw new RuntimeException("fatal error",e);
+						}
 					}
+					return null;
 				}
 			}
 		}
-		System.out.println("get size:" + queue.size());
 		return new IoBufferArray(buff);
 	}
 	public int size(){

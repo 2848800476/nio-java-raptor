@@ -14,7 +14,7 @@ import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketConfigure;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketServer;
 import cn.com.sparkle.raptor.core.transport.socket.nio.exception.SessionHavaClosedException;
 
-public class TestServerObjectProtocol {
+public class TestServerByteProtocol {
 
 	/**
 	 * @param args
@@ -24,7 +24,7 @@ public class TestServerObjectProtocol {
 	public static void main(String[] args) throws IOException, QueueFullException {
 		// TODO Auto-generated method stub
 		NioSocketConfigure nsc = new NioSocketConfigure();
-		nsc.setProcessorNum(1);
+		nsc.setProcessorNum(2);
 		nsc.setCycleRecieveBuffCellSize(1000);
 		nsc.setTcpNoDelay(true);
 //		nsc.setRecieveBuffSize(32* 1024);
@@ -32,12 +32,12 @@ public class TestServerObjectProtocol {
 		//nsc.setRevieveBuffSize(1024 * 2048);
 		//nsc.setTcpNoDelay(true);
 		NioSocketServer server = new NioSocketServer(nsc);
-		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(20000, 512, 20, 300, 60, TimeUnit.SECONDS,new ObjectProtocol(), new TestObjectProtocolHandler()));
+		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(50000, 512, 20, 300, 60, TimeUnit.SECONDS,new ByteProtocol(128), new TestByteProtocolHandler()));
 //		server.bind(new InetSocketAddress(12345),new FilterChain(new TestHandler()));
 	}
 	
 }
-class TestObjectProtocolHandler implements ProtocolHandler{
+class TestByteProtocolHandler implements ProtocolHandler{
 	private int i = 0;
 	
 
@@ -46,7 +46,6 @@ class TestObjectProtocolHandler implements ProtocolHandler{
 			ProtocolHandlerIoSession session) {
 		try {
 			session.writeObject( "ÄãºÃ£¡Mr client!This is server!" + (++i));
-//			session.writeObject("ÄãºÃ£¡");
 		} catch (SessionHavaClosedException e) {
 		}
 	}

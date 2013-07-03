@@ -4,8 +4,8 @@ import java.net.Socket;
 import java.net.SocketException;
 
 public class NioSocketConfigure {
-	private int recieveBuffSize = 2048;
-	private int sentBuffSize =  2*1024;
+	private int recieveBuffSize = 8*1024;
+	private int sentBuffSize =  8*1024;
 	private boolean tcpNoDelay = false;
 	private boolean keepAlive = true;
 	private boolean oobInline;
@@ -15,12 +15,12 @@ public class NioSocketConfigure {
 	private int processorNum = 1;
 	private int registerWriteDelay = 0;
 	private int registerReadDelay = 0;
-	private int reRegisterWriteDelay = 300;
+	private int reRegisterWriteDelay = 100;
 	private int registerConnecterDelay = 0;
 	private int clearTimeoutSessionInterval = 300000;
 	private int trySendNum = 60;
 	private boolean isDaemon = false;
-	private int cycleRecieveBuffCellSize = 100000;
+	private int cycleRecieveBuffCellSize = 20000;
 	private int soTimeOut = 500;
 
 	public int getCycleRecieveBuffCellSize() {

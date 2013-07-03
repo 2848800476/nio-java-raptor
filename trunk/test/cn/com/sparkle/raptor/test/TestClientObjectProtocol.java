@@ -26,13 +26,13 @@ public class TestClientObjectProtocol {
 		nsc.setTcpNoDelay(true);
 		nsc.setCycleRecieveBuffCellSize(10000);
 		nsc.setSentBuffSize(1024);
-		IoHandler handler = new MultiThreadProtecolHandler(1000, 8 * 1024, 20, 300, 60, TimeUnit.SECONDS,new ObjectProtocol(), new TestProtocolObjetClientHandler());
+		IoHandler handler = new MultiThreadProtecolHandler(1000, 512, 20, 300, 60, TimeUnit.SECONDS,new ObjectProtocol(), new TestProtocolObjetClientHandler());
 		for(int i = 0 ; i < 1 ; i++){
 //			client.connect(new InetSocketAddress("10.10.83.243",1234), handler,"aaa" + i);
 			
 //			client.connect(new InetSocketAddress("192.168.3.100",1234),handler,"aaa" + i );
-//			client.connect(new InetSocketAddress("127.0.0.1",1234),handler,"aaa" + i );
-			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );
+			client.connect(new InetSocketAddress("127.0.0.1",1234),handler,"aaa" + i );
+//			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );
 		}
 	}
 
@@ -42,9 +42,10 @@ class TestProtocolObjetClientHandler implements ProtocolHandler{
 	private int i = 0;
 	private String test = "ÄãºÃ£¡Mr server !This is client  cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc             !write package";
 	public TestProtocolObjetClientHandler() {
-		for(int i = 0 ; i < 0 ; i++){
+		for(int i = 0 ; i < 1 ; i++){
 			test += test;
 		}
+//		test ="ccc";
 	}
 	@Override
 	public void onOneThreadSessionOpen(ProtocolHandlerIoSession session) {

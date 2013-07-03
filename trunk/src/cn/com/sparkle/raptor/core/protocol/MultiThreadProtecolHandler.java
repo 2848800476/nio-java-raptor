@@ -1,5 +1,7 @@
 package cn.com.sparkle.raptor.core.protocol;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -7,16 +9,16 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
+
 import org.apache.log4j.Logger;
 
 import cn.com.sparkle.raptor.core.buff.BuffPool;
-import cn.com.sparkle.raptor.core.buff.CycleAllocateBuff;
-import cn.com.sparkle.raptor.core.buff.CycleAllocateBytesBuffPool;
 import cn.com.sparkle.raptor.core.buff.CycleBuff;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.buff.SyncBuffPool;
+import cn.com.sparkle.raptor.core.buff.BuffPool.PoolEmptyException;
 import cn.com.sparkle.raptor.core.collections.LastAccessTimeLinkedList.Entity;
-import cn.com.sparkle.raptor.core.collections.Queue;
+import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
 import cn.com.sparkle.raptor.core.transport.socket.nio.IoSession;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketProcessor;
@@ -109,6 +111,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 			if (attachment.isExecuting) {
 				// add job to queue
 				attachment.jobQueue.addLast(jobDo);
+//				System.out.println(attachment.jobQueue.size());
 				if (attachment.jobQueue.size() == MAX_EVENT_QUEUE_SIZE) {
 					session.suspendRead();// because too many read
 				}
@@ -140,15 +143,26 @@ public class MultiThreadProtecolHandler implements IoHandler {
 	public void onSessionClose(IoSession session) {
 
 		// return CycleBuffer to BufferPool
-		IoBuffer buff;
-		while ((buff = session.peekWaitSendBuff()) != null) {
-			if (buff instanceof CycleBuff) {
-				((CycleBuff) buff).close();
-			}
-			session.pollWaitSendBuff();
-		}
 		ProtocolHandlerIoSession mySession = (ProtocolHandlerIoSession) session
 				.attachment();
+		try {
+			if (mySession != null) {
+				mySession.writeLock.lock();
+			}
+			IoBuffer buffer;
+			while((buffer = session.peekIoBuffer()) != null){
+				if (buffer instanceof CycleBuff) {
+					((CycleBuff) buffer).close();
+				}
+				session.truePollWaitSendBuff();
+				
+			}
+		} finally {
+			if (mySession != null) {
+				mySession.writeLock.unlock();
+			}
+		}
+
 		if (mySession != null) {
 			while (mySession.unFinishedList.size() > 0) {
 				if (mySession.unFinishedList.getFirst() instanceof CycleBuff) {
@@ -176,7 +190,8 @@ public class MultiThreadProtecolHandler implements IoHandler {
 	}
 
 	@Override
-	public void onMessageRecieved(IoSession session, IoBuffer message) {
+	public void onMessageRecieved(IoSession session, IoBuffer message)
+			throws IOException {
 		ProtocolHandlerIoSession attachment = (ProtocolHandlerIoSession) session
 				.attachment();
 		Object obj = null;
@@ -268,6 +283,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 						if (mySession.jobQueue.size() == MAX_EVENT_QUEUE_SIZE) {
 							session.continueRead();
 						}
+//						System.out.println(mySession.jobQueue.size());
 						jobDo = mySession.jobQueue.removeFirst();
 					} else {
 						mySession.isExecuting = false;
@@ -290,7 +306,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		private LinkedList<IoBuffer> unFinishedList = new LinkedList<IoBuffer>();
 		public Object protocolAttachment;
 		public Object customAttachment;
-		
+
 		private ReentrantLock writeLock = new ReentrantLock();
 
 		private IoSession session;
@@ -344,12 +360,15 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		public boolean tryWrite(IoBuffer message)
 				throws SessionHavaClosedException {
 			try {
+				writeLock.lock();
 				return session.tryWrite(message);
 			} catch (SessionHavaClosedException e) {
 				if (message instanceof CycleBuff) {
 					((CycleBuff) message).close();
 				}
 				throw e;
+			} finally {
+				writeLock.unlock();
 			}
 		}
 
@@ -357,62 +376,131 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		public void write(IoBuffer message) throws SessionHavaClosedException {
 
 			try {
+				writeLock.lock();
 				session.write(message);
 			} catch (SessionHavaClosedException e) {
 				if (message instanceof CycleBuff) {
 					((CycleBuff) message).close();
 				}
 				throw e;
+			} finally {
+				writeLock.unlock();
 			}
 		}
 
+		/**
+		 * @param obj
+		 * @return the size of bytes writed
+		 * @throws SessionHavaClosedException
+		 */
 
-		public void writeObject(Object obj) throws SessionHavaClosedException {
-			if (protocol == null) {
-				throw new RuntimeException("not supported method");
-			}
-			IoBuffer buff = session.getLastButOneSendBuff();
-			IoBuffer[] buffs = protocol.encode(buffPool, obj, buff);
-			for(int i = 0 ; i < buffs.length ; ++i){
-				try{
-					session.write(buffs[i]);
-				} catch (SessionHavaClosedException e) {
-					for(;i<buffs.length; ++i){
-						if (buffs[i] instanceof CycleBuff) {
-							((CycleBuff) buffs[i]).close();
+		public int writeObject(Object obj) throws SessionHavaClosedException {
+			while (true) {
+				try {
+					int pos = 0;
+					IoBuffer buff = null;
+					try {
+						writeLock.lock();
+						if (protocol == null) {
+							throw new RuntimeException("not supported method");
 						}
+
+						buff = session.getLastWaitSendBuffer();
+						if (buff != null) {
+							pos = buff.getByteBuffer().position();
+						}
+
+						IoBuffer[] buffs = protocol.encode(buffPool, obj, buff);
+						if( buff!= null){
+							session.flushLastWaitSendBuffer(buff);
+						}
+						for (int i = 0; i < buffs.length; ++i) {
+							try {
+								session.write(buffs[i]);
+							} catch (SessionHavaClosedException e) {
+								for (; i < buffs.length; ++i) {
+									if (buffs[i] instanceof CycleBuff) {
+										((CycleBuff) buffs[i]).close();
+									}
+								}
+								throw e;
+							}
+						}
+						int totalSize = 0;
+						if (buff != null) {
+							totalSize = buff.getByteBuffer().position() - pos;
+						}
+						if (buffs.length > 1) {
+							totalSize += (buffs.length - 1)
+									* buffPool.getCellCapacity();
+						}
+						if (buffs.length >= 1) {
+							totalSize += buffs[buffs.length - 1]
+									.getByteBuffer().position();
+						}
+						return totalSize;
+					} catch (IOException e) {
+						logger.debug("", e);
+						if (buff != null) {
+							buff.getByteBuffer().position(pos);
+						}
+						throw e;
+					}finally {
+						writeLock.unlock();
 					}
+				} catch (PoolEmptyException e) {
+					logger.info("maybe you need to incread the size of pool!");
+					try {
+						Thread.sleep(1);
+					} catch (InterruptedException e1) {
+						e1.printStackTrace();
+					}
+				} catch (IOException e) {
+					logger.error("fatal error", e);
+					throw new RuntimeException(e);
 				}
-				
 			}
-			
-			
-//			if(buff == null){
-//				logger.debug("no hit not full buff");
-//			}else{
-//				logger.debug("hit not full buff");
-//			}
-			
+			// if(buff == null){
+			// logger.debug("no hit not full buff");
+			// }else{
+			// logger.debug("hit not full buff");
+			// }
+
 		}
 
-		@Override
-		public IoBuffer getLastButOneSendBuff() {
-			return session.getLastButOneSendBuff();
-		}
-
-		@Override
-		public IoBuffer peekWaitSendBuff() {
-			return session.peekWaitSendBuff();
-		}
-
-		@Override
-		public void pollWaitSendBuff() {
-			session.pollWaitSendBuff();
-		}
+		// @Override
+		// public IoBuffer getLastButOneSendBuff() {
+		// return session.getLastButOneSendBuff();
+		// }
 
 		@Override
 		public void attach(Object attachment) {
 			session.attach(attachment);
+		}
+
+		@Override
+		public IoBuffer getLastWaitSendBuffer() {
+			return session.getLastWaitSendBuffer();
+		}
+
+		@Override
+		public void flushLastWaitSendBuffer(IoBuffer buffer) {
+			session.flushLastWaitSendBuffer(buffer);
+		}
+		
+		@Override
+		public IoBuffer peekIoBuffer() {
+			return session.peekIoBuffer();
+		}
+
+		@Override
+		public MaximumSizeArrayCycleQueue<ByteBuffer>.Bulk peekWaitSendBulk() {
+			return session.peekWaitSendBulk();
+		}
+
+		@Override
+		public boolean pollWaitSendBuff() {
+			return session.pollWaitSendBuff();
 		}
 
 		@Override

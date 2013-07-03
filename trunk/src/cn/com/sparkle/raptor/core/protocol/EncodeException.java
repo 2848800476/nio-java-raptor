@@ -1,6 +1,8 @@
 package cn.com.sparkle.raptor.core.protocol;
 
-public class EncodeException extends RuntimeException {
+import java.io.IOException;
+
+public class EncodeException extends IOException {
 
 	private static final long serialVersionUID = 1L;
 

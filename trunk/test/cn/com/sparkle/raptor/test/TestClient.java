@@ -32,9 +32,9 @@ class ConnectThread extends Thread{
 	}
 	public void run(){
 		try{
-			for(int i =0 ;i < 1000;i++){
-//				nc.connect(new InetSocketAddress("127.0.0.1",1234), new TestClientHandler());
-				nc.connect(new InetSocketAddress("192.168.3.100",1234), new TestClientHandler());
+			for(int i =0 ;i < 1;i++){
+				nc.connect(new InetSocketAddress("127.0.0.1",1234), new TestClientHandler());
+//				nc.connect(new InetSocketAddress("192.168.3.100",1234), new TestClientHandler());
 //				nc.connect(new InetSocketAddress("10.10.83.243",1234), new TestClientHandler());
 //				client.connect(new InetSocketAddress("220.181.118.141",1234), new FilterChain(new TestClientHandler()));
 				
@@ -53,6 +53,8 @@ class TestClientHandler implements IoHandler {
 	int cc = 0;
 	@Override
 	public void onMessageRecieved(IoSession session, IoBuffer message) {
+		message.getByteBuffer().position(message.getByteBuffer().limit());
+		
 //		System.out.println("client recieve");
 //		Integer size = (Integer)session.attachment();
 //		if(size == null) size = 0;
@@ -62,27 +64,33 @@ class TestClientHandler implements IoHandler {
 //		if(size != 1024) return;
 //		
 //		session.attach(0);
-//		IoBuffer temp = new AllocateBytesBuff(1024,false);
-//		temp.getByteBuffer().position(temp.getByteBuffer().limit());
+		IoBuffer temp = new AllocateBytesBuff(128,false);
+		temp.getByteBuffer().position(temp.getByteBuffer().limit());
 //		try {
 //			session.tryWrite(temp);
 //		} catch (SessionHavaClosedException e1) {
 //			// TODO Auto-generated catch block
 //			e1.printStackTrace();
 //		}
-//		try{
-//			lock.lock();
-//			++cc;
-//			if(cc%1000 == 0){
-//				long tt = System.currentTimeMillis() - ct;
-//				System.out.println((cc*1000/tt) + "/s");
-//				ct = System.currentTimeMillis();
-//				cc = 1;
-//			}
-//		}finally{
-//			lock.unlock();
-//		}
+		try{
+			lock.lock();
+			++cc;
+			if(cc%10000 == 0){
+				long tt = System.currentTimeMillis() - ct;
+				System.out.println((cc*1000/tt) + "/s");
+				ct = System.currentTimeMillis();
+				cc = 1;
+			}
+		}finally{
+			lock.unlock();
+		}
 		
+		try {
+			session.write(temp);
+		} catch (SessionHavaClosedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -96,7 +104,7 @@ class TestClientHandler implements IoHandler {
 	}
 	
 	
-	private byte[] buff = new byte[1024];
+	private byte[] buff = new byte[128];
 	@Override
 	public void onSessionOpened(IoSession session) {
 		int temp = i.addAndGet(1);
@@ -106,14 +114,14 @@ class TestClientHandler implements IoHandler {
 		
 		IoBuffer iobuffer = new QuoteBytesBuff(buff, 0, buff.length);
 //		System.out.println("session open");
-		iobuffer.getByteBuffer().position(iobuffer.getByteBuffer().limit());
 //		System.out.println(iobuffer.getByteBuffer().remaining());
+		iobuffer.getByteBuffer().position(iobuffer.getByteBuffer().limit());
 //		
-//		try {
-//			session.tryWrite(iobuffer);
-//		} catch (SessionHavaClosedException e) {
-//			e.printStackTrace();
-//		}
+		try {
+			session.tryWrite(iobuffer);
+		} catch (SessionHavaClosedException e) {
+			e.printStackTrace();
+		}
 //		A a = new A();
 //		a.session = session;
 //		a.start();

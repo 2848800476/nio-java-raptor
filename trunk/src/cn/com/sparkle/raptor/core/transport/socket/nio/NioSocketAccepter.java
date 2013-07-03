@@ -21,7 +21,7 @@ public class NioSocketAccepter {
 	private Selector selector;
 	private NioSocketConfigure nscfg;
 	private MultNioSocketProcessor multNioSocketProcessor;
-	private MaximumSizeArrayCycleQueue<QueueBean> waitRegisterQueue = new MaximumSizeArrayCycleQueue<NioSocketAccepter.QueueBean>(
+	private MaximumSizeArrayCycleQueue<QueueBean> waitRegisterQueue = new MaximumSizeArrayCycleQueue<NioSocketAccepter.QueueBean>(NioSocketAccepter.QueueBean.class,
 			100);
 
 	private class QueueBean {

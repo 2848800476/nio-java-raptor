@@ -1,7 +1,10 @@
 package cn.com.sparkle.raptor.core.protocol;
 
+import java.io.IOException;
+
 import cn.com.sparkle.raptor.core.buff.BuffPool;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
+import cn.com.sparkle.raptor.core.buff.BuffPool.PoolEmptyException;
 import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler.ProtocolHandlerIoSession;
 
 public interface Protocol {
@@ -15,10 +18,10 @@ public interface Protocol {
 	 * @param buff
 	 * @return
 	 */
-	public Object decode(ProtocolHandlerIoSession mySession, IoBuffer buff);
+	public Object decode(ProtocolHandlerIoSession mySession, IoBuffer buff) throws IOException;
 
-	public IoBuffer[] encode(BuffPool buffpool, Object message);
+	public IoBuffer[] encode(BuffPool buffpool, Object message) throws IOException,PoolEmptyException;
 	
-	public IoBuffer[] encode(BuffPool buffpool,Object message,IoBuffer lastWaitSendBuff);
+	public IoBuffer[] encode(BuffPool buffpool,Object message,IoBuffer lastWaitSendBuff) throws IOException,PoolEmptyException;
 
 }

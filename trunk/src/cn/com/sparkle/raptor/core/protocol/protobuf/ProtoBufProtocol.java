@@ -1,12 +1,15 @@
-package cn.com.sparkle.raptor.core.protocol.javaobject;
+package cn.com.sparkle.raptor.core.protocol.protobuf;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+
+import com.google.protobuf.GeneratedMessage;
 
 import cn.com.sparkle.raptor.core.buff.BuffPool;
 import cn.com.sparkle.raptor.core.buff.BuffPool.PoolEmptyException;
@@ -20,8 +23,22 @@ import cn.com.sparkle.raptor.core.protocol.EncodeException;
 import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler.ProtocolHandlerIoSession;
 import cn.com.sparkle.raptor.core.protocol.Protocol;
 
-public class ObjectProtocol implements Protocol {
-	private Logger logger = Logger.getLogger(ObjectProtocol.class);
+public class ProtoBufProtocol implements Protocol {
+	private Logger logger = Logger.getLogger(ProtoBufProtocol.class);
+	private GeneratedMessage[] map = new GeneratedMessage[65536];
+	private HashMap<Class, Integer> classMap = new HashMap<Class, Integer>();
+	public void registerMessage(int id,GeneratedMessage message){
+		if(id > 65535 || id < 0){
+			throw new RuntimeException("id must be between [0,65535]!");
+		}
+		if(map[id] != null){
+			throw new RuntimeException("repeated id of the message!");
+		}
+		map[id] = message;
+		classMap.put(message.getClass(), id);
+	}
+	
+
 	@Override
 	public void init(ProtocolHandlerIoSession session) {
 		session.protocolAttachment = new ObjectProtocolCacheBean();
@@ -53,7 +70,25 @@ public class ObjectProtocol implements Protocol {
 		} else
 			return -1;
 	}
-
+	
+	private int getIndex(ObjectProtocolCacheBean bean){
+		IoBuffer buff = bean.buff.getFirst();
+		int r = 0;
+		for (int i = 0; i < 2; i++) {
+			r = r | ((buff.getByteBuffer().get() & 0xff) << ((1 - i) * 8));
+			while (!buff.getByteBuffer().hasRemaining()) {
+				bean.buff.removeFirst();
+				if(bean.buff.size() != 0){
+					buff = bean.buff.getFirst();
+				}else{
+					break;
+				}
+			}
+		}
+		return r;
+		
+//		return ((bs[0] & 0xff) << 8) | (bs[1] & 0xff);
+	}
 	@Override
 	public Object decode(ProtocolHandlerIoSession session, IoBuffer buff) throws DecodeException{
 		ObjectProtocolCacheBean bean = (ObjectProtocolCacheBean) session.protocolAttachment;
@@ -67,41 +102,15 @@ public class ObjectProtocol implements Protocol {
 				return null;
 		}
 		if (bean.recieveSize >= bean.curPackageSize) {
-			ObjectInputStream is = null;
+			int index = getIndex(bean);
+			if(map[index] == null){
+				throw new DecodeException("The message is not registered to protocol! id:" + index);
+			}
 			Object o;
 			try {
-//				int size = 0;
-//				for(IoBuffer buffer:bean.buff){
-//					size += buffer.getByteBuffer().remaining();
-//				}
-				int start = bean.buff.getFirst().getByteBuffer().position();
-				try{
-				is = new ObjectInputStream(new IoBufferArrayInputStream(
+				o = map[index].newBuilderForType().mergeFrom(new IoBufferArrayInputStream(
 						bean.buff.toArray(new IoBuffer[bean.buff.size()]),
-						bean.curPackageSize));
-				o = is.readObject();
-				}catch(Exception e){
-					int ff = 0;
-					for(IoBuffer buffer:bean.buff){
-						if(ff == 0){
-							buffer.getByteBuffer().position(start);
-						}else{
-							buffer.getByteBuffer().position(0);
-						}
-					}
-					ff = 0;
-					System.out.print("dump[");
-					for(int i = 0 ; i < bean.curPackageSize ; i++){
-						if(!bean.buff.getFirst().getByteBuffer().hasRemaining()){
-							bean.buff.removeFirst();
-						}
-						
-						System.out.print(bean.buff.getFirst().getByteBuffer().get()+ " ");
-					}
-					System.out.println("]");
-					throw new IOException(e);
-				}
-				
+						bean.curPackageSize-2));
 				bean.recieveSize -= bean.curPackageSize;
 				bean.curPackageSize = -1;
 				// remove and close IoBuffer that has been unuseful.
@@ -113,12 +122,7 @@ public class ObjectProtocol implements Protocol {
 			} catch (Exception e) {
 				logger.debug("bean.recieveSize" + bean.recieveSize + " bean.curPackageSize:" + bean.curPackageSize);
 				throw new DecodeException(e);
-			} finally {
-				try {
-					is.close();
-				} catch (Exception e) {
-				}
-			}
+			} 
 		}
 		return null;
 	}
@@ -131,37 +135,31 @@ public class ObjectProtocol implements Protocol {
 	@Override
 	public IoBuffer[] encode(BuffPool buffpool, Object message,
 			IoBuffer lastWaitSendBuff) throws IOException {
-		ObjectOutputStream out = null;
-		
-		try {
+		Integer index = classMap.get(message.getClass());
+		if(index == null){
+			throw new RuntimeException("The message is not registered to protocol! class:" + message.getClass());
+		}
+			GeneratedMessage generatedMessage = (GeneratedMessage)message;
 			BufferPoolOutputStream bufferPoolOutputStream = new BufferPoolOutputStream(
-					buffpool, 4,lastWaitSendBuff);
-			
-			out = new ObjectOutputStream(bufferPoolOutputStream);
-			out.writeObject(message);
-			out.flush();
+					buffpool, 6,lastWaitSendBuff);
+			generatedMessage.writeTo(bufferPoolOutputStream);
 			List<IoBuffer> list = bufferPoolOutputStream.getBuffArray();
-			
 			// write count to buff
-			int writeCount = bufferPoolOutputStream.getWriteCount();
+			int writeCount = bufferPoolOutputStream.getWriteCount() + 2;
 			byte[] size = {
 					(byte) (writeCount >> 24),
 					(byte) (writeCount >> 16),
 					(byte) (writeCount >> 8),
-					(byte) (writeCount)
+					(byte) (writeCount),
+					(byte)(index >> 8 & 0xff),
+					(byte)(index & 0xff)
 			}; 
-//			System.out.println(writeCount);
-			bufferPoolOutputStream.writeReserve(size, 0, 4);
+//			System.out.println(writeCount + 2);
+			bufferPoolOutputStream.writeReserve(size, 0, 6);
 			if(lastWaitSendBuff != null){
 				list.remove(0);
 			}
 			return list.toArray(new IoBuffer[list.size()]);
-		}finally {
-			try {
-				out.close();
-			} catch (Exception e) {
-			}
-		}
 	}
 	
 }
