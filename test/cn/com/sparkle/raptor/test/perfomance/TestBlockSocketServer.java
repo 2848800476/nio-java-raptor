@@ -12,36 +12,54 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class TestBlockSocketServer {
+	static class DealThread extends Thread {
+		private Socket s;
 
-	/**
-	 * @param args
-	 * @throws IOException 
-	 * @throws ClassNotFoundException 
-	 */
-	public static void main(String[] args) throws IOException, ClassNotFoundException {
-		
-		ServerSocket ss = new ServerSocket(1234);
-		while(true){
-			try{
-				Socket s = ss.accept();
-				s.setTcpNoDelay(true);
+		public DealThread(Socket s) {
+			super();
+			this.s = s;
+		}
+
+		public void run() {
+			try {
 				InputStream is = s.getInputStream();
 				OutputStream os = s.getOutputStream();
-				byte[] b = new byte[128*8];
-				while(true){
+				byte[] b = new byte[128];
+				while (true) {
 					int size = 0;
-					while(true){
-					size += is.read(b,size,b.length - size);
-					if(size == b.length) break;
+					while (true) {
+						size += is.read(b, size, b.length - size);
+						if (size == b.length)
+							break;
 					}
-					
+
 					os.write(b);
 					os.flush();
 				}
-			}catch(Throwable e){
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
-		
+		}
+	}
+
+	/**
+	 * @param args
+	 * @throws IOException
+	 * @throws ClassNotFoundException
+	 */
+	public static void main(String[] args) throws IOException,
+			ClassNotFoundException {
+
+		ServerSocket ss = new ServerSocket(1234);
+		while (true) {
+			try {
+				Socket s = ss.accept();
+				s.setTcpNoDelay(true);
+				new DealThread(s).start();
+			} catch (Throwable e) {
+				e.printStackTrace();
+			}
+
 		}
 	}
 

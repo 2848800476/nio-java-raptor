@@ -3,8 +3,6 @@ package cn.com.sparkle.raptor.test;
 import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
@@ -22,23 +20,21 @@ import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketConfigure;
 import cn.com.sparkle.raptor.core.transport.socket.nio.exception.SessionHavaClosedException;
 import cn.com.sparkle.raptor.test.model.javaserialize.TestMessage;
 
-public class TestAynscClientObjectProtocol {
-	private final static Logger logger = Logger.getLogger(TestAynscClientObjectProtocol.class);
+public class TestAynscClientByteProtocol {
+	private final static Logger logger = Logger.getLogger(TestAynscClientByteProtocol.class);
 	public static void main(String[] args) throws Exception {
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		nsc.setTcpNoDelay(true);
-		nsc.setProcessorNum(1);
+		nsc.setProcessorNum(2);
 		nsc.setCycleRecieveBuffCellSize(1000);
-		
-		NioSocketClient client = new NioSocketClient(nsc);
-		
 //		nsc.setRecieveBuffSize(8 * 1024);
-		IoHandler handler = new MultiThreadProtecolHandler(1000,  8 * 1024, 20, 300, 60, TimeUnit.SECONDS,new ObjectProtocol(), new TestAsyncProtocolObjetClientHandler());
+		NioSocketClient client = new NioSocketClient(nsc);
+		IoHandler handler = new MultiThreadProtecolHandler(1000,  8*1024, 20, 300, 60, TimeUnit.SECONDS,new ByteProtocol(128), new TestAsyncByteObjetClientHandler());
 		for(int i = 0 ; i < 1; i++){
 //			client.connect(new InetSocketAddress("10.10.83.243",1234), handler,"aaa" + i);
 //			client.connect(new InetSocketAddress("192.168.3.100",1234),handler,"aaa" + i );
-//			client.connect(new InetSocketAddress("127.0.0.1",1234),handler,"aaa" + i );
-			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );
+			client.connect(new InetSocketAddress("127.0.0.1",1234),handler,"aaa" + i );
+//			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );
 			
 		}
 		logger.warn("sssssss");
@@ -46,56 +42,52 @@ public class TestAynscClientObjectProtocol {
 
 }
 
-class TestAsyncProtocolObjetClientHandler implements ProtocolHandler{
+class TestAsyncByteObjetClientHandler implements ProtocolHandler{
 	
 	private static AtomicInteger flag = new AtomicInteger(0);
 //	private int i = 0;
-	private String soure = "ÄãºÃ£¡Mr server !This is client  ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc             !write package";
+	private String soure = "ÄãºÃ£¡Mr server !This is client  cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc             !write package";
 	private String test = "";
-	public TestAsyncProtocolObjetClientHandler(){
+	public TestAsyncByteObjetClientHandler(){
 		for(int i = 0 ; i < 1 ;i++){
 			test += soure;
 		}
-//		test = "a";
+//		test = "fsfwef";
 	}
 	
 	private LinkedList<CountDownLatch> l = new LinkedList<CountDownLatch>();
 	private ReentrantLock llock = new ReentrantLock();
 	public CountDownLatch send(Object o,ProtocolHandlerIoSession session) throws SessionHavaClosedException{
-		CountDownLatch c;
-		try{
-			llock.lock();
-			c = new CountDownLatch(1);
-			
-			l.addLast(c);
-		}finally{
-			llock.unlock();
-		}
-		int size = session.writeObject(o);
-		return c;
+		
+			CountDownLatch c = new CountDownLatch(1);
+			try{
+				llock.lock();
+				l.addLast(c);
+			}finally{
+				llock.unlock();
+			}
+			session.writeObject(o);
+			return c;
+		
+		
 	}
 	@Override
 	public void onOneThreadSessionOpen(final ProtocolHandlerIoSession session) {
-		for(int i = 0 ; i < 1; i++){
+		for(int i = 0 ; i < 1 ; i++){
 		Thread t = new Thread(){
 			public void run(){
-				int i = 0;
-				long now = System.currentTimeMillis();
-				TestMessage tm = new TestMessage(-1,("²âÊÔÃüÁî" + ct + "   avvvasddwwq"),false);
 				while(true){
-//					IoBuffer[] buffa = protocol.encode(buffPool, "ÄãºÃ£¡Mr server cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc!This is client" + attachment.customAttachment + "!write package" + (++i));
-//					System.out.println("cellsize" + buffPool.getCellCapacity());
-//					System.out.println(buffa[0].getByteBuffer().capacity() - buffa[0].getByteBuffer().remaining());
-					
 					try {
-//						CountDownLatch c = send(test, session);
-						CountDownLatch c = send(tm,session);
-//						System.out.println("write object");
+						CountDownLatch c = send(test, session);
+						
 //						c.await();
-					} catch (Exception e) {
+					} catch (SessionHavaClosedException e) {
 						e.printStackTrace();
 						break;
-					}
+					} 
+//					catch (InterruptedException e) {
+//						e.printStackTrace();
+//					}
 					
 				}
 			}
@@ -133,9 +125,6 @@ class TestAsyncProtocolObjetClientHandler implements ProtocolHandler{
 		try{
 			llock.lock();
 			l.removeFirst().countDown();
-//			if(l.size() != 0){
-//				System.out.println("11111111111");
-//			}
 		}finally{
 			llock.unlock();
 		}
@@ -143,9 +132,9 @@ class TestAsyncProtocolObjetClientHandler implements ProtocolHandler{
 			lock.lock();
 			++cc;
 			++tc;
-			if(cc%1000000 == 0){
+			if(cc%100000 == 0){
 				long tt = System.currentTimeMillis() - ct;
-				System.out.println((cc*1000/tt) + "/s   " + (tc /(System.currentTimeMillis() - start) * 1000) + "/s");
+				System.out.println((cc*1000/tt) + "/s   " + (tc * 1000/(System.currentTimeMillis() - start) ) + "/s");
 				ct = System.currentTimeMillis();
 				cc = 1;
 			}

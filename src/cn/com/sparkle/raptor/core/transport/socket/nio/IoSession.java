@@ -1,7 +1,9 @@
 package cn.com.sparkle.raptor.core.transport.socket.nio;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
@@ -9,7 +11,9 @@ import org.apache.log4j.Logger;
 import cn.com.sparkle.raptor.core.buff.CycleBuff;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.collections.LastAccessTimeLinkedList.Entity;
+import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue.Bulk;
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue;
+import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue.QueueFullException;
 import cn.com.sparkle.raptor.core.collections.Queue;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
 import cn.com.sparkle.raptor.core.transport.socket.nio.exception.SessionHavaClosedException;
@@ -17,11 +21,13 @@ import cn.com.sparkle.raptor.core.util.TimeUtil;
 
 public class IoSession {
 	private final static Logger logger = Logger.getLogger(IoSession.class);
-	
+
 	private long lastActiveTime;
 	private SocketChannel channel;
-	private MaximumSizeArrayCycleQueue<IoBuffer> waitSendQueue = new MaximumSizeArrayCycleQueue<IoBuffer>(
-			100);
+	private MaximumSizeArrayCycleQueue<ByteBuffer> waitSendQueue = new MaximumSizeArrayCycleQueue<ByteBuffer>(
+			ByteBuffer.class, 100);
+	private MaximumSizeArrayCycleQueue<IoBuffer> waitSendQueueList = new MaximumSizeArrayCycleQueue<IoBuffer>(
+			IoBuffer.class, 100);
 	private NioSocketProcessor processor;
 	private IoHandler handler;
 	private Object attachment;
@@ -29,7 +35,9 @@ public class IoSession {
 
 	private volatile boolean isClose = false;
 
-	private AtomicInteger waitSendQueueSize = new AtomicInteger(0);
+	private AtomicInteger isGetLast = new AtomicInteger(0);
+
+	private AtomicInteger registerBarrier = new AtomicInteger(0);
 
 	public IoSession(NioSocketProcessor processor, SocketChannel channel,
 			IoHandler handler) {
@@ -66,6 +74,18 @@ public class IoSession {
 	public void continueRead() {
 		processor.registerRead(this);
 	}
+	protected AtomicInteger getRegisterBarrier(){
+		return registerBarrier;
+	}
+//	protected boolean unSetWriteRegisterBarrier(){
+//		boolean isSuccess = registerBarrier.getAndSet(0) == 1;
+//		return isSuccess;
+//	}
+//	protected boolean setWriteRegisterBarrier(){
+//		boolean isSuccess = registerBarrier.getAndSet(1) == 0;
+//		return isSuccess;
+//		
+//	}
 
 	public boolean tryWrite(IoBuffer message) throws SessionHavaClosedException {
 		// this progress of lock is necessary,because the method tryWrite will
@@ -73,31 +93,24 @@ public class IoSession {
 		if (isClose) {
 			throw new SessionHavaClosedException("IoSession have closed!");
 		}
-		message.getByteBuffer().limit(message.getByteBuffer().position())
-				.position(0);
-		try {
-			waitSendQueue.push(message);
-			waitSendQueueSize.addAndGet(1);
-		} catch (Exception e) {
-			message.getByteBuffer().position(message.getByteBuffer().limit());// if
-																				// tryWrite
-																				// false,fix
-																				// position
-																				// to
-																				// next
-																				// invoking
+		if(!waitSendQueueList.hasRemain()){
 			return false;
 		}
-		// notify NioSocketProcessor to register a write action
-		try {
-			processor.getLock().lock();
-			processor.registerWrite(this);
-			return true;
-		} finally {
-			processor.getLock().unlock();
-		}
+		int flag = registerBarrier.getAndSet(2);
+			ByteBuffer buffer = message.getByteBuffer().asReadOnlyBuffer();
+			buffer.limit(buffer.position()).position(0);
+			try {
+				waitSendQueueList.push(message);
+				waitSendQueue.push(buffer);
+			} catch (QueueFullException e) {
+				throw new RuntimeException("fatal error",e);
+			}
+			if(flag == 0){
+				processor.registerWrite(this);
+			}
+		return true;
 	}
-
+ 
 	public void write(IoBuffer message) throws SessionHavaClosedException {
 		while (true) {
 			if (tryWrite(message)) {
@@ -110,35 +123,68 @@ public class IoSession {
 		}
 	}
 
-	public IoBuffer getLastButOneSendBuff() {
-		IoBuffer buff = waitSendQueue.last();
-		if (waitSendQueueSize.decrementAndGet() > 0 && buff.getByteBuffer().limit() < buff.getByteBuffer().capacity()) {
-			waitSendQueue.pollLast();
-			buff.getByteBuffer().position(buff.getByteBuffer().limit()).limit(buff.getByteBuffer().capacity());
-			return buff;
-		}else {
-			waitSendQueueSize.addAndGet(1);//fix negative or zero size
+	// public IoBuffer getLastButOneSendBuff() {
+	// IoBuffer buff = waitSendQueue.last();
+	// if (waitSendQueueSize.decrementAndGet() > 0 &&
+	// buff.getByteBuffer().limit() < buff.getByteBuffer().capacity()) {
+	// waitSendQueue.pollLast();
+	// buff.getByteBuffer().position(buff.getByteBuffer().limit()).limit(buff.getByteBuffer().capacity());
+	// return buff;
+	// }else {
+	// waitSendQueueSize.addAndGet(1);//fix negative or zero size
+	// return null;
+	// }
+	//
+	// }
+	public IoBuffer getLastWaitSendBuffer() {
+		int is = isGetLast.addAndGet(1);
+		IoBuffer buffer = waitSendQueueList.last();
+		if (is > 0 && buffer != null && buffer.getByteBuffer().hasRemaining()) {
+			return buffer;
+		} else {
+			isGetLast.decrementAndGet();
 			return null;
 		}
-		
 	}
 
-	public IoBuffer peekWaitSendBuff() {
-		try{
-			int size = waitSendQueueSize.decrementAndGet();
-			if(size <0){
-				return null;
-			}else{
-				return waitSendQueue.peek();
-			}
-		}finally{
-			waitSendQueueSize.addAndGet(1);
+	public void flushLastWaitSendBuffer(IoBuffer buffer) {
+		ByteBuffer bb = waitSendQueue.last();
+		int flag = registerBarrier.getAndSet(2);
+		
+		if (buffer.getByteBuffer().position() > bb.limit()) {
+			bb.limit(buffer.getByteBuffer().position());
+		}
+		isGetLast.decrementAndGet();
+		
+		if (flag == 0) {
+			// notify NioSocketProcessor to register a write action
+			processor.registerWrite(this);
 		}
 	}
 
-	public void pollWaitSendBuff() {
-		waitSendQueueSize.decrementAndGet();
+	public MaximumSizeArrayCycleQueue<ByteBuffer>.Bulk peekWaitSendBulk() {
+		return waitSendQueue.getBulk();
+	}
+
+	public IoBuffer peekIoBuffer() {
+		return waitSendQueueList.peek();
+	}
+
+	public boolean pollWaitSendBuff() {
+		int is = isGetLast.decrementAndGet();
+		if (is < 0 && !waitSendQueue.peek().hasRemaining()) {
+			truePollWaitSendBuff();
+			isGetLast.addAndGet(1);
+			return true;
+		} else {
+			isGetLast.addAndGet(1);
+			return false;
+		}
+	}
+
+	public void truePollWaitSendBuff() {
 		waitSendQueue.poll();
+		waitSendQueueList.poll();
 	}
 
 	public void attach(Object attachment) {

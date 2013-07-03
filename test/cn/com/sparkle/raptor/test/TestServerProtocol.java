@@ -34,7 +34,7 @@ public class TestServerProtocol {
 		//nsc.setSentBuffSize(1024);
 		//nsc.setRevieveBuffSize(1024 * 2048);
 		nsc.setReuseAddress(true);
-		nsc.setProcessorNum(4);
+		nsc.setProcessorNum(16);
 		nsc.setTcpNoDelay(true);
 		NioSocketServer server = new NioSocketServer(nsc);
 		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(100000, 1024, 20, 300, 60, TimeUnit.SECONDS,new TextLineProtocol(), new TestProtocolHandler()));

@@ -17,7 +17,7 @@ public class NioSocketConnector {
 	private MultNioSocketProcessor multNioSocketProcessor;
 	NioSocketConfigure nscfg;
 	private MaximumSizeArrayCycleQueue<QueueBean> waitConnectQueue = new MaximumSizeArrayCycleQueue<NioSocketConnector.QueueBean>(
-			100000);
+			NioSocketConnector.QueueBean.class, 100000);
 	private DelayChecked checkRegisterConnecter;
 
 	private class QueueBean {

@@ -8,7 +8,7 @@ import cn.com.sparkle.raptor.core.util.TimeUtil;
 
 public class DelayCheckedTimer {
 	private static LinkedList<DelayChecked> l = new LinkedList<DelayChecked>();
-	private static MaximumSizeArrayCycleQueue<DelayChecked> waitAddDelayCheck = new MaximumSizeArrayCycleQueue<DelayChecked>(
+	private static MaximumSizeArrayCycleQueue<DelayChecked> waitAddDelayCheck = new MaximumSizeArrayCycleQueue<DelayChecked>(DelayChecked.class,
 			100);
 
 	public static void work() {

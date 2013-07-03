@@ -9,12 +9,16 @@ import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler;
 import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler.ProtocolHandlerIoSession;
 import cn.com.sparkle.raptor.core.protocol.ProtocolHandler;
 import cn.com.sparkle.raptor.core.protocol.javaobject.ObjectProtocol;
+import cn.com.sparkle.raptor.core.protocol.protobuf.ProtoBufProtocol;
 import cn.com.sparkle.raptor.core.transport.socket.nio.IoSession;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketConfigure;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketServer;
 import cn.com.sparkle.raptor.core.transport.socket.nio.exception.SessionHavaClosedException;
+import cn.com.sparkle.raptor.test.model.protocolbuffer.PersonMessage;
+import cn.com.sparkle.raptor.test.model.protocolbuffer.PersonMessage.AddressBook;
+import cn.com.sparkle.raptor.test.model.protocolbuffer.PersonMessage.Person;
 
-public class TestServerObjectProtocol {
+public class TestServerProtobufProtocol {
 
 	/**
 	 * @param args
@@ -31,21 +35,27 @@ public class TestServerObjectProtocol {
 //		nsc.setSentBuffSize( 8 * 1024);
 		//nsc.setRevieveBuffSize(1024 * 2048);
 		//nsc.setTcpNoDelay(true);
+		ProtoBufProtocol protocol = new ProtoBufProtocol();
+		protocol.registerMessage(1, PersonMessage.AddressBook.getDefaultInstance());
+		
+		
 		NioSocketServer server = new NioSocketServer(nsc);
-		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(20000, 512, 20, 300, 60, TimeUnit.SECONDS,new ObjectProtocol(), new TestObjectProtocolHandler()));
+		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(20000, 512, 20, 300, 60, TimeUnit.SECONDS,protocol, new ProtobufProtocolHandler()));
 //		server.bind(new InetSocketAddress(12345),new FilterChain(new TestHandler()));
 	}
 	
 }
-class TestObjectProtocolHandler implements ProtocolHandler{
+class ProtobufProtocolHandler implements ProtocolHandler{
 	private int i = 0;
-	
+	private String soure = "ÄãºÃ£¡Mr server !This is client  cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc             !write package";
 
 	@Override
 	public void onOneThreadMessageRecieved(Object receiveObject,
 			ProtocolHandlerIoSession session) {
 		try {
-			session.writeObject( "ÄãºÃ£¡Mr client!This is server!" + (++i));
+			Person.Builder builder = Person.newBuilder().setId(++i).setName(soure);
+			AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
+			session.writeObject( ab.build());
 //			session.writeObject("ÄãºÃ£¡");
 		} catch (SessionHavaClosedException e) {
 		}

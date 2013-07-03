@@ -16,14 +16,18 @@ import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler;
 import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler.ProtocolHandlerIoSession;
 import cn.com.sparkle.raptor.core.protocol.ProtocolHandler;
 import cn.com.sparkle.raptor.core.protocol.javaobject.ObjectProtocol;
+import cn.com.sparkle.raptor.core.protocol.protobuf.ProtoBufProtocol;
 import cn.com.sparkle.raptor.core.transport.socket.nio.IoSession;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketClient;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketConfigure;
 import cn.com.sparkle.raptor.core.transport.socket.nio.exception.SessionHavaClosedException;
 import cn.com.sparkle.raptor.test.model.javaserialize.TestMessage;
+import cn.com.sparkle.raptor.test.model.protocolbuffer.PersonMessage;
+import cn.com.sparkle.raptor.test.model.protocolbuffer.PersonMessage.AddressBook;
+import cn.com.sparkle.raptor.test.model.protocolbuffer.PersonMessage.Person;
 
-public class TestAynscClientObjectProtocol {
-	private final static Logger logger = Logger.getLogger(TestAynscClientObjectProtocol.class);
+public class TestAynscClientProtobufProtocol {
+	private final static Logger logger = Logger.getLogger(TestAynscClientProtobufProtocol.class);
 	public static void main(String[] args) throws Exception {
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		nsc.setTcpNoDelay(true);
@@ -32,13 +36,15 @@ public class TestAynscClientObjectProtocol {
 		
 		NioSocketClient client = new NioSocketClient(nsc);
 		
-//		nsc.setRecieveBuffSize(8 * 1024);
-		IoHandler handler = new MultiThreadProtecolHandler(1000,  8 * 1024, 20, 300, 60, TimeUnit.SECONDS,new ObjectProtocol(), new TestAsyncProtocolObjetClientHandler());
+		ProtoBufProtocol protocol = new ProtoBufProtocol();
+		protocol.registerMessage(1, PersonMessage.AddressBook.getDefaultInstance());
+		
+		IoHandler handler = new MultiThreadProtecolHandler(1000,  8 * 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, new TestAynscClientProtobufProtocolHandler());
 		for(int i = 0 ; i < 1; i++){
 //			client.connect(new InetSocketAddress("10.10.83.243",1234), handler,"aaa" + i);
 //			client.connect(new InetSocketAddress("192.168.3.100",1234),handler,"aaa" + i );
-//			client.connect(new InetSocketAddress("127.0.0.1",1234),handler,"aaa" + i );
-			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );
+			client.connect(new InetSocketAddress("127.0.0.1",1234),handler,"aaa" + i );
+//			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );
 			
 		}
 		logger.warn("sssssss");
@@ -46,18 +52,10 @@ public class TestAynscClientObjectProtocol {
 
 }
 
-class TestAsyncProtocolObjetClientHandler implements ProtocolHandler{
+class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 	
 	private static AtomicInteger flag = new AtomicInteger(0);
-//	private int i = 0;
-	private String soure = "ƒ„∫√£°Mr server !This is client  ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc             !write package";
-	private String test = "";
-	public TestAsyncProtocolObjetClientHandler(){
-		for(int i = 0 ; i < 1 ;i++){
-			test += soure;
-		}
-//		test = "a";
-	}
+	private String soure = "ƒ„∫√£°Mr server !This is client  cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc             !write package";
 	
 	private LinkedList<CountDownLatch> l = new LinkedList<CountDownLatch>();
 	private ReentrantLock llock = new ReentrantLock();
@@ -81,7 +79,7 @@ class TestAsyncProtocolObjetClientHandler implements ProtocolHandler{
 			public void run(){
 				int i = 0;
 				long now = System.currentTimeMillis();
-				TestMessage tm = new TestMessage(-1,("≤‚ ‘√¸¡Ó" + ct + "   avvvasddwwq"),false);
+//				TestMessage tm = new TestMessage(-1,("≤‚ ‘√¸¡Ó" + ct + "   avvvasddwwq"),false);
 				while(true){
 //					IoBuffer[] buffa = protocol.encode(buffPool, "ƒ„∫√£°Mr server cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc!This is client" + attachment.customAttachment + "!write package" + (++i));
 //					System.out.println("cellsize" + buffPool.getCellCapacity());
@@ -89,7 +87,9 @@ class TestAsyncProtocolObjetClientHandler implements ProtocolHandler{
 					
 					try {
 //						CountDownLatch c = send(test, session);
-						CountDownLatch c = send(tm,session);
+						Person.Builder builder = Person.newBuilder().setId(++i).setName(soure);
+						AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
+						CountDownLatch c = send(ab.build(),session);
 //						System.out.println("write object");
 //						c.await();
 					} catch (Exception e) {
@@ -143,7 +143,7 @@ class TestAsyncProtocolObjetClientHandler implements ProtocolHandler{
 			lock.lock();
 			++cc;
 			++tc;
-			if(cc%1000000 == 0){
+			if(cc%10000 == 0){
 				long tt = System.currentTimeMillis() - ct;
 				System.out.println((cc*1000/tt) + "/s   " + (tc /(System.currentTimeMillis() - start) * 1000) + "/s");
 				ct = System.currentTimeMillis();
