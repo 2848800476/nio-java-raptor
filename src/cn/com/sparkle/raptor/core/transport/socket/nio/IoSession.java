@@ -32,6 +32,10 @@ public class IoSession {
 	private IoHandler handler;
 	private Object attachment;
 	private Entity<IoSession> lastAccessTimeLinkedListwrapSession = null;
+	
+	private volatile boolean isSuspendRead = false;
+	
+	protected boolean isRegisterReWrite = false;
 
 	private volatile boolean isClose = false;
 
@@ -46,7 +50,9 @@ public class IoSession {
 		this.handler = handler;
 		this.lastAccessTimeLinkedListwrapSession = new Entity<IoSession>(this);
 	}
-
+	public MaximumSizeArrayCycleQueue<ByteBuffer> getDebugQueue(){
+		return waitSendQueue;
+	}
 	public IoHandler getHandler() {
 		return handler;
 	}
@@ -67,12 +73,22 @@ public class IoSession {
 		return processor;
 	}
 
+	public boolean isSuspendRead(){
+		return isSuspendRead;
+	}
+	
 	public void suspendRead() {
-		processor.unRegisterRead(this);
+		if(!isSuspendRead){
+			isSuspendRead = true;
+			processor.unRegisterRead(this);
+		}
 	}
 
 	public void continueRead() {
-		processor.registerRead(this);
+		if(isSuspendRead){
+			isSuspendRead = false;
+			processor.registerRead(this);
+		}
 	}
 	protected AtomicInteger getRegisterBarrier(){
 		return registerBarrier;
@@ -112,8 +128,17 @@ public class IoSession {
 	}
  
 	public void write(IoBuffer message) throws SessionHavaClosedException {
+		int i = 0 ;
 		while (true) {
+			i++;
+//			if(i > 300){
+//				processor.debug = true;
+//			}
 			if (tryWrite(message)) {
+//				if(i > 20){
+//					System.out.println("more loop time " + i);
+//				}
+//				processor.debug = false;
 				break;
 			}
 			try {

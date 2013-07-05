@@ -1,5 +1,6 @@
 package cn.com.sparkle.raptor.core.protocol;
 
+import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler.ProtocolHandlerIoSession;
 import cn.com.sparkle.raptor.core.transport.socket.nio.IoSession;
 
@@ -17,5 +18,5 @@ public interface ProtocolHandler {
 			ProtocolHandlerIoSession session);
 
 	public void onOneThreadMessageSent(
-			ProtocolHandlerIoSession session);
+			ProtocolHandlerIoSession session,int sendSize);
 }
