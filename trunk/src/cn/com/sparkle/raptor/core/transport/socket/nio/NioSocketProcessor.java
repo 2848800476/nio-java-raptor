@@ -24,10 +24,13 @@ import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue;
 import cn.com.sparkle.raptor.core.collections.Queue;
 import cn.com.sparkle.raptor.core.delaycheck.DelayChecked;
 import cn.com.sparkle.raptor.core.delaycheck.DelayCheckedTimer;
+import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler.ProtocolHandlerIoSession;
 import cn.com.sparkle.raptor.core.util.TimeUtil;
 
 public class NioSocketProcessor {
 	private Logger logger = Logger.getLogger(NioSocketProcessor.class);
+	
+//	public volatile boolean debug = false;
 
 	private Selector selector;
 	private ReentrantLock lock = new ReentrantLock();
@@ -168,7 +171,11 @@ public class NioSocketProcessor {
 	// return lock;
 	// }
 
+	
 	private boolean changeInterestWrite(SelectionKey key, boolean isInterest) {
+//		if(debug){
+//			logger.debug(isInterest);
+//		}
 		int i = key.interestOps();
 		if (isInterest) {
 			if ((i & SelectionKey.OP_WRITE) == 0) {
@@ -244,6 +251,9 @@ public class NioSocketProcessor {
 					} else {
 						key.attach(session);
 						changeInterestWrite(key, true);
+//						if(debug){
+//							logger.debug("change to write");
+//						}
 						activeSessionLinedLinkedList.putOrMoveFirst(session
 								.getLastAccessTimeLinkedListwrapSession());
 					}
@@ -285,18 +295,22 @@ public class NioSocketProcessor {
 						checkReRegisterWrite.needRun();
 						break;
 					}
-					if (!session.isClose()
-							&& session.peekWaitSendBulk() != null) {
+					if (!session.isClose()) {
 						SelectionKey key = session.getChannel()
 								.keyFor(selector);
 						key.attach(session);
 						changeInterestWrite(key, true);
-						activeSessionLinedLinkedList.putOrMoveFirst(session
-								.getLastAccessTimeLinkedListwrapSession());
+						session.isRegisterReWrite = false;
+//						logger.debug("change to rewrite" + session.getLastActiveTime());
+//						activeSessionLinedLinkedList.putOrMoveFirst(session
+//								.getLastAccessTimeLinkedListwrapSession());
 					}
 					reRegisterQueueWrite.poll();
 				}
 				if (i > 0) {
+//					if(debug){
+//						logger.debug("active session");
+//					}
 					Iterator<SelectionKey> iter = selector.selectedKeys()
 							.iterator();
 					while (iter.hasNext()) {
@@ -361,6 +375,9 @@ public class NioSocketProcessor {
 										if (sendSize != 0)
 											break;
 									}
+//									if(debug){
+//										logger.debug(sendSize + " " + session.getRegisterBarrier().get() + "  " + session.getDebugQueue().size() );
+//									}
 									isClearWrite = false;
 									for (int j = buffW.getOffset(); j < buffW
 											.getOffset() + buffW.getLength(); j++) {
@@ -389,13 +406,17 @@ public class NioSocketProcessor {
 										// 服务器，此時當前session将进入到等待队列，等候一段时间后重新注册写事件
 										try {
 											isClearWrite = true;
-											reRegisterQueueWrite.push(session);
-											activeSessionLinedLinkedList
-													.remove(session
-															.getLastAccessTimeLinkedListwrapSession());
-											checkReRegisterWrite.needRun();
+											if(!session.isRegisterReWrite){
+												session.isRegisterReWrite = true;
+												reRegisterQueueWrite.push(session);
+												activeSessionLinedLinkedList
+														.remove(session
+																.getLastAccessTimeLinkedListwrapSession());
+												checkReRegisterWrite.needRun();
+											}
 										} catch (Exception e) {
 										}
+										
 									}
 									
 								}else{

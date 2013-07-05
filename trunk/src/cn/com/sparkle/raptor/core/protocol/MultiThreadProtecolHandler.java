@@ -29,6 +29,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 			.getLogger(MultiThreadProtecolHandler.class);
 
 	private final static int MAX_EVENT_QUEUE_SIZE = 100;
+	private final static int CONTINUE_READ_THRESHOLD = (int)(MAX_EVENT_QUEUE_SIZE * 0.6);
 
 	private SyncBuffPool buffPool;
 	private ThreadPoolExecutor threadPool;
@@ -56,6 +57,41 @@ public class MultiThreadProtecolHandler implements IoHandler {
 			throw new RuntimeException("not supported method");
 		}
 
+	};
+	private static abstract class Do<T> {
+		public T o;
+
+		public abstract void doJob(IoSession session);
+	}
+	private class OpenJob<T> extends Do<T>{
+		@Override
+		public void doJob(IoSession session) {
+			handler.onOneThreadSessionOpen((ProtocolHandlerIoSession) session
+					.attachment());
+		}
+	}
+	private class CloseJob<T> extends Do<T>{
+		@Override
+		public void doJob(IoSession session) {
+
+			handler.onOneThreadSessionClose((ProtocolHandlerIoSession) session
+					.attachment());
+		}
+	}
+	private class SentJob extends Do<Integer>{
+		public void doJob(IoSession session) {
+			handler.onOneThreadMessageSent((ProtocolHandlerIoSession) session
+					.attachment(),this.o);
+		}
+	}
+	private class ExceptionDo extends  Do<Throwable>{
+		@Override
+		public void doJob(IoSession session) {
+			handler.onOneThreadCatchException(
+					session,
+					session.attachment() instanceof ProtocolHandlerIoSession ? (ProtocolHandlerIoSession) session
+							.attachment() : null, o);
+		}
 	};
 
 	public MultiThreadProtecolHandler(int sendBuffTotalCellSize,
@@ -128,14 +164,15 @@ public class MultiThreadProtecolHandler implements IoHandler {
 	}
 
 	public void onSessionOpen(IoSession session) {
-
-		Do jobDo = new Do() {
-			@Override
-			public void doJob(IoSession session) {
-				handler.onOneThreadSessionOpen((ProtocolHandlerIoSession) session
-						.attachment());
-			}
-		};
+		
+//		Do jobDo = new Do() {
+//			@Override
+//			public void doJob(IoSession session) {
+//				handler.onOneThreadSessionOpen((ProtocolHandlerIoSession) session
+//						.attachment());
+//			}
+//		};
+		Do jobDo = new OpenJob();
 		runOrWaitInQueue(jobDo, session);
 	}
 
@@ -178,14 +215,15 @@ public class MultiThreadProtecolHandler implements IoHandler {
 			}
 		}
 		// activate close event
-		Do jobDo = new Do() {
-			@Override
-			public void doJob(IoSession session) {
-
-				handler.onOneThreadSessionClose((ProtocolHandlerIoSession) session
-						.attachment());
-			}
-		};
+//		Do jobDo = new Do() {
+//			@Override
+//			public void doJob(IoSession session) {
+//
+//				handler.onOneThreadSessionClose((ProtocolHandlerIoSession) session
+//						.attachment());
+//			}
+//		};
+		Do jobDo = new CloseJob();
 		runOrWaitInQueue(jobDo, session);
 	}
 
@@ -234,27 +272,30 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		if (message instanceof CycleBuff) {
 			((CycleBuff) message).close();
 		}
-		Do<IoBuffer> jobDo = new Do<IoBuffer>() {
-			@Override
-			public void doJob(IoSession session) {
-				handler.onOneThreadMessageSent((ProtocolHandlerIoSession) session
-						.attachment());
-			}
-		};
+//		Do<IoBuffer> jobDo = new Do<IoBuffer>() {
+//			@Override
+//			public void doJob(IoSession session) {
+//				handler.onOneThreadMessageSent((ProtocolHandlerIoSession) session
+//						.attachment());
+//			}
+//		};
+		SentJob jobDo = new SentJob();
+		jobDo.o = message.getByteBuffer().remaining();
 		runOrWaitInQueue(jobDo, session);
 	}
 
 	@Override
 	public void catchException(IoSession session, Throwable e) {
-		Do<Throwable> jobDo = new Do<Throwable>() {
-			@Override
-			public void doJob(IoSession session) {
-				handler.onOneThreadCatchException(
-						session,
-						session.attachment() instanceof ProtocolHandlerIoSession ? (ProtocolHandlerIoSession) session
-								.attachment() : null, o);
-			}
-		};
+//		Do<Throwable> jobDo = new Do<Throwable>() {
+//			@Override
+//			public void doJob(IoSession session) {
+//				handler.onOneThreadCatchException(
+//						session,
+//						session.attachment() instanceof ProtocolHandlerIoSession ? (ProtocolHandlerIoSession) session
+//								.attachment() : null, o);
+//			}
+//		};
+		ExceptionDo jobDo = new ExceptionDo();
 		jobDo.o = e;
 		runOrWaitInQueue(jobDo, session);
 	}
@@ -280,7 +321,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 					;
 				try {
 					if (!mySession.jobQueue.isEmpty()) {
-						if (mySession.jobQueue.size() == MAX_EVENT_QUEUE_SIZE) {
+						if (mySession.jobQueue.size() == CONTINUE_READ_THRESHOLD &&mySession.isSuspendRead()) {
 							session.continueRead();
 						}
 //						System.out.println(mySession.jobQueue.size());
@@ -320,7 +361,13 @@ public class MultiThreadProtecolHandler implements IoHandler {
 			this.protocol = protocol;
 			this.buffPool = buffPool;
 		}
-
+		public LinkedList<Do<Object>> getJob(){
+			return jobQueue;
+		}
+		@Override
+		public boolean isSuspendRead() {
+			return session.isSuspendRead();
+		}
 		@Override
 		public IoHandler getHandler() {
 			return session.getHandler();
@@ -409,11 +456,15 @@ public class MultiThreadProtecolHandler implements IoHandler {
 						if (buff != null) {
 							pos = buff.getByteBuffer().position();
 						}
-
-						IoBuffer[] buffs = protocol.encode(buffPool, obj, buff);
-						if( buff!= null){
-							session.flushLastWaitSendBuffer(buff);
+						IoBuffer[] buffs = null;
+						try{
+							buffs = protocol.encode(buffPool, obj, buff);
+						}finally{
+							if( buff!= null){
+								session.flushLastWaitSendBuffer(buff);
+							}
 						}
+						
 						for (int i = 0; i < buffs.length; ++i) {
 							try {
 								session.write(buffs[i]);
@@ -523,10 +574,6 @@ public class MultiThreadProtecolHandler implements IoHandler {
 	//
 	// }
 
-	public static abstract class Do<T> {
-		public T o;
-
-		public abstract void doJob(IoSession session);
-	}
+	
 
 }
