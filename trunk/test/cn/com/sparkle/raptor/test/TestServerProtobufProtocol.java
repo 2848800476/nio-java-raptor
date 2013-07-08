@@ -54,17 +54,12 @@ class ProtobufProtocolHandler implements ProtocolHandler{
 	@Override
 	public void onOneThreadMessageRecieved(Object receiveObject,
 			ProtocolHandlerIoSession session) {
-		long ct = System.currentTimeMillis();
 		try {
 			Person.Builder builder = Person.newBuilder().setId(++i).setName(soure);
 			AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
 			session.writeObject( ab.build());
 //			session.writeObject("ÄãºÃ£¡");
 		} catch (SessionHavaClosedException e) {
-		}
-		ct = System.currentTimeMillis() - ct;
-		if(ct > 20){
-			System.out.println("warning : cost too many time " + ct);
 		}
 	}
 

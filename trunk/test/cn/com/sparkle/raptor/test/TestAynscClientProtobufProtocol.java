@@ -44,20 +44,20 @@ public class TestAynscClientProtobufProtocol {
 		
 		TestAynscClientProtobufProtocolHandler ih = new TestAynscClientProtobufProtocolHandler();
 		IoHandler handler = new MultiThreadProtecolHandler(10000, 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, ih);
-//		for(int i = 0 ; i < 1 ; i++){
-		while(true){
+		for(int i = 0 ; i < 1 ; i++){
+//		while(true){
 			WaitFinishConnect wfc = new WaitFinishConnect();
 //			client.connect(new InetSocketAddress("10.10.83.243",1234), handler,"aaa" + i);
 //			client.connect(new InetSocketAddress("192.168.3.100",1234),handler,"aaa" + i );
 		
 			client.connect(new InetSocketAddress("127.0.0.1",1234),handler, wfc);
 //			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );
-			wfc.count.await();
-			Person.Builder builder = Person.newBuilder().setId(1).setName(ih.soure);
-			AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
-			CountDownLatch c = ih.send(ab.build(),wfc.session);
-			c.await();
-			wfc.session.closeSocketChannel();
+//			wfc.count.await();
+//			Person.Builder builder = Person.newBuilder().setId(1).setName(ih.soure);
+//			AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
+//			CountDownLatch c = ih.send(ab.build(),wfc.session);
+//			c.await();
+//			wfc.session.closeSocketChannel();
 		}
 	}
 
@@ -94,7 +94,7 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 		WaitFinishConnect wfc = (WaitFinishConnect)session.customAttachment;
 		wfc.session = session;
 		wfc.count.countDown();
-		/*
+		
 		for(int i = 0 ; i < 1; i++){
 		Thread t = new Thread(){
 			public void run(){
@@ -105,8 +105,6 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 						Person.Builder builder = Person.newBuilder().setId(++i).setName(soure);
 						AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
 						CountDownLatch c = send(ab.build(),session);
-						c.await();
-						break;
 					} catch (Exception e) {
 						e.printStackTrace();
 						break;
@@ -116,7 +114,7 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 			}
 		};
 		t.start();
-		}*/
+		}
 	}
 
 	@Override
