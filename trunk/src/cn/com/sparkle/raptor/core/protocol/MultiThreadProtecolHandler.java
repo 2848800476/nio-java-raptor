@@ -445,6 +445,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 			while (true) {
 				try {
 					int pos = 0;
+					int totalSize = 0;
 					IoBuffer buff = null;
 					try {
 						writeLock.lock();
@@ -453,12 +454,15 @@ public class MultiThreadProtecolHandler implements IoHandler {
 						}
 
 						buff = session.getLastWaitSendBuffer();
-						if (buff != null) {
-							pos = buff.getByteBuffer().position();
-						}
 						IoBuffer[] buffs = null;
 						try{
+							if (buff != null) {
+								pos = buff.getByteBuffer().position();
+							}
 							buffs = protocol.encode(buffPool, obj, buff);
+							if (buff != null) {
+								totalSize = buff.getByteBuffer().position() - pos;
+							}
 						}finally{
 							if( buff!= null){
 								session.flushLastWaitSendBuffer(buff);
@@ -467,6 +471,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 						
 						for (int i = 0; i < buffs.length; ++i) {
 							try {
+								totalSize += buffs[i].getByteBuffer().position();
 								session.write(buffs[i]);
 							} catch (SessionHavaClosedException e) {
 								for (; i < buffs.length; ++i) {
@@ -476,18 +481,6 @@ public class MultiThreadProtecolHandler implements IoHandler {
 								}
 								throw e;
 							}
-						}
-						int totalSize = 0;
-						if (buff != null) {
-							totalSize = buff.getByteBuffer().position() - pos;
-						}
-						if (buffs.length > 1) {
-							totalSize += (buffs.length - 1)
-									* buffPool.getCellCapacity();
-						}
-						if (buffs.length >= 1) {
-							totalSize += buffs[buffs.length - 1]
-									.getByteBuffer().position();
 						}
 						return totalSize;
 					} catch (IOException e) {

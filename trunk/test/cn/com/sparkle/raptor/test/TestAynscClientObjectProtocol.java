@@ -160,7 +160,7 @@ class TestAsyncProtocolObjetClientHandler implements ProtocolHandler{
 		e.printStackTrace();
 	}
 	@Override
-	public void onOneThreadMessageSent(ProtocolHandlerIoSession session) {
+	public void onOneThreadMessageSent(ProtocolHandlerIoSession session,int sendSize) {
 		
 	}
 

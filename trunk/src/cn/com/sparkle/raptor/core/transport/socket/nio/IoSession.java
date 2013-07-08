@@ -231,6 +231,7 @@ public class IoSession {
 	public void closeSocketChannel() {
 		try {
 			channel.close();
+			channel.socket().close();
 		} catch (IOException e) {
 		}
 	}

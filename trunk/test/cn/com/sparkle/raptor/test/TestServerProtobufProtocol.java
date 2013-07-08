@@ -3,6 +3,7 @@ package cn.com.sparkle.raptor.test;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue.QueueFullException;
 import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler;
@@ -31,6 +32,7 @@ public class TestServerProtobufProtocol {
 		nsc.setProcessorNum(1);
 		nsc.setCycleRecieveBuffCellSize(1000);
 		nsc.setTcpNoDelay(true);
+		nsc.setReuseAddress(true);
 //		nsc.setRecieveBuffSize(32* 1024);
 //		nsc.setSentBuffSize( 8 * 1024);
 		//nsc.setRevieveBuffSize(1024 * 2048);
@@ -40,7 +42,7 @@ public class TestServerProtobufProtocol {
 		
 		
 		NioSocketServer server = new NioSocketServer(nsc);
-		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(20000, 512, 20, 300, 60, TimeUnit.SECONDS,protocol, new ProtobufProtocolHandler()));
+		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(10000, 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, new ProtobufProtocolHandler()));
 //		server.bind(new InetSocketAddress(12345),new FilterChain(new TestHandler()));
 	}
 	
@@ -52,12 +54,17 @@ class ProtobufProtocolHandler implements ProtocolHandler{
 	@Override
 	public void onOneThreadMessageRecieved(Object receiveObject,
 			ProtocolHandlerIoSession session) {
+		long ct = System.currentTimeMillis();
 		try {
 			Person.Builder builder = Person.newBuilder().setId(++i).setName(soure);
 			AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
 			session.writeObject( ab.build());
 //			session.writeObject("ÄãºÃ£¡");
 		} catch (SessionHavaClosedException e) {
+		}
+		ct = System.currentTimeMillis() - ct;
+		if(ct > 20){
+			System.out.println("warning : cost too many time " + ct);
 		}
 	}
 
@@ -68,10 +75,10 @@ class ProtobufProtocolHandler implements ProtocolHandler{
 		
 	}
 
-
+	AtomicInteger ai = new AtomicInteger();
 	@Override
 	public void onOneThreadSessionClose(ProtocolHandlerIoSession session) {
-		System.out.println("disconnect");
+		System.out.println("disconnect" + ai.addAndGet(1));
 	}
 
 
@@ -86,7 +93,7 @@ class ProtobufProtocolHandler implements ProtocolHandler{
 
 
 	@Override
-	public void onOneThreadMessageSent(ProtocolHandlerIoSession session) {
+	public void onOneThreadMessageSent(ProtocolHandlerIoSession session,int sendSize) {
 		// TODO Auto-generated method stub
 		
 	}

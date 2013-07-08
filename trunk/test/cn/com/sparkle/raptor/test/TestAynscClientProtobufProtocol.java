@@ -28,34 +28,47 @@ import cn.com.sparkle.raptor.test.model.protocolbuffer.PersonMessage.Person;
 
 public class TestAynscClientProtobufProtocol {
 	private final static Logger logger = Logger.getLogger(TestAynscClientProtobufProtocol.class);
+	
 	public static void main(String[] args) throws Exception {
+		logger.debug("start");
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		nsc.setTcpNoDelay(true);
 		nsc.setProcessorNum(1);
 		nsc.setCycleRecieveBuffCellSize(1000);
+		nsc.setReuseAddress(true);
 		
 		NioSocketClient client = new NioSocketClient(nsc);
 		
 		ProtoBufProtocol protocol = new ProtoBufProtocol();
 		protocol.registerMessage(1, PersonMessage.AddressBook.getDefaultInstance());
 		
-		IoHandler handler = new MultiThreadProtecolHandler(1000,  8 * 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, new TestAynscClientProtobufProtocolHandler());
-		for(int i = 0 ; i < 1; i++){
+		TestAynscClientProtobufProtocolHandler ih = new TestAynscClientProtobufProtocolHandler();
+		IoHandler handler = new MultiThreadProtecolHandler(10000, 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, ih);
+//		for(int i = 0 ; i < 1 ; i++){
+		while(true){
+			WaitFinishConnect wfc = new WaitFinishConnect();
 //			client.connect(new InetSocketAddress("10.10.83.243",1234), handler,"aaa" + i);
 //			client.connect(new InetSocketAddress("192.168.3.100",1234),handler,"aaa" + i );
-			client.connect(new InetSocketAddress("127.0.0.1",1234),handler,"aaa" + i );
+		
+			client.connect(new InetSocketAddress("127.0.0.1",1234),handler, wfc);
 //			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );
-			
+			wfc.count.await();
+			Person.Builder builder = Person.newBuilder().setId(1).setName(ih.soure);
+			AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
+			CountDownLatch c = ih.send(ab.build(),wfc.session);
+			c.await();
+			wfc.session.closeSocketChannel();
 		}
-		logger.warn("sssssss");
 	}
 
 }
-
+class WaitFinishConnect{
+	CountDownLatch count = new CountDownLatch(1);
+	ProtocolHandlerIoSession session;
+}
 class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
-	
 	private static AtomicInteger flag = new AtomicInteger(0);
-	private String soure = "ÄãºÃ£¡Mr server !This is client  cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc             !write package";
+	public String soure = "ÄãºÃ£¡Mr server !This is client  cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc             !write package";
 	
 	private LinkedList<CountDownLatch> l = new LinkedList<CountDownLatch>();
 	private ReentrantLock llock = new ReentrantLock();
@@ -70,28 +83,30 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 			llock.unlock();
 		}
 		int size = session.writeObject(o);
+		if(size == 0){
+			throw new RuntimeException();
+		}
+//		System.out.println("sendSize" + size);
 		return c;
 	}
 	@Override
 	public void onOneThreadSessionOpen(final ProtocolHandlerIoSession session) {
+		WaitFinishConnect wfc = (WaitFinishConnect)session.customAttachment;
+		wfc.session = session;
+		wfc.count.countDown();
+		/*
 		for(int i = 0 ; i < 1; i++){
 		Thread t = new Thread(){
 			public void run(){
 				int i = 0;
 				long now = System.currentTimeMillis();
-//				TestMessage tm = new TestMessage(-1,("²âÊÔÃüÁî" + ct + "   avvvasddwwq"),false);
 				while(true){
-//					IoBuffer[] buffa = protocol.encode(buffPool, "ÄãºÃ£¡Mr server cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc!This is client" + attachment.customAttachment + "!write package" + (++i));
-//					System.out.println("cellsize" + buffPool.getCellCapacity());
-//					System.out.println(buffa[0].getByteBuffer().capacity() - buffa[0].getByteBuffer().remaining());
-					
 					try {
-//						CountDownLatch c = send(test, session);
 						Person.Builder builder = Person.newBuilder().setId(++i).setName(soure);
 						AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
 						CountDownLatch c = send(ab.build(),session);
-//						System.out.println("write object");
-//						c.await();
+						c.await();
+						break;
 					} catch (Exception e) {
 						e.printStackTrace();
 						break;
@@ -101,13 +116,7 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 			}
 		};
 		t.start();
-		}
-//		IoBuffer[] buffa = protocol.encode(buffPool, "ÄãºÃ£¡Mr server ccccccccccccccc!This is client" + attachment.customAttachment + "!write package" + (++i));
-//		System.out.println(buffa[0].getByteBuffer().capacity() - buffa[0].getByteBuffer().remaining());
-//		try {
-//			session.write(buffa);
-//		} catch (SessionHavaClosedException e) {
-//		}
+		}*/
 	}
 
 	@Override
@@ -157,10 +166,10 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 	@Override
 	public void onOneThreadCatchException(IoSession ioSession,
 			ProtocolHandlerIoSession attachment, Throwable e) {
-		e.printStackTrace();
+//		e.printStackTrace();
 	}
 	@Override
-	public void onOneThreadMessageSent(ProtocolHandlerIoSession session) {
+	public void onOneThreadMessageSent(ProtocolHandlerIoSession session,int sendSize) {
 		
 	}
 
