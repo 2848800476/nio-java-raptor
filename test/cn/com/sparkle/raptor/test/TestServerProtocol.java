@@ -83,7 +83,7 @@ class TestProtocolHandler implements ProtocolHandler{
 
 
 	@Override
-	public void onOneThreadMessageSent(ProtocolHandlerIoSession session) {
+	public void onOneThreadMessageSent(ProtocolHandlerIoSession session,int sendSize) {
 		// TODO Auto-generated method stub
 		
 	}
