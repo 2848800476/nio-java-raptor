@@ -10,6 +10,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import com.google.protobuf.GeneratedMessage;
+import com.google.protobuf.Message.Builder;
 
 import cn.com.sparkle.raptor.core.buff.BuffPool;
 import cn.com.sparkle.raptor.core.buff.BuffPool.PoolEmptyException;
@@ -106,9 +107,8 @@ public class ProtoBufProtocol implements Protocol {
 			if(map[index] == null){
 				throw new DecodeException("The message is not registered to protocol! id:" + index);
 			}
-			Object o;
 			try {
-				o = map[index].newBuilderForType().mergeFrom(new IoBufferArrayInputStream(
+				Builder b = map[index].newBuilderForType().mergeFrom(new IoBufferArrayInputStream(
 						bean.buff.toArray(new IoBuffer[bean.buff.size()]),
 						bean.curPackageSize-2));
 				bean.recieveSize -= bean.curPackageSize;
@@ -118,7 +118,7 @@ public class ProtoBufProtocol implements Protocol {
 						&& !bean.buff.getFirst().getByteBuffer().hasRemaining()) {
 					bean.buff.removeFirst();
 				}
-				return o;
+				return b.build();
 			} catch (Exception e) {
 				logger.debug("bean.recieveSize" + bean.recieveSize + " bean.curPackageSize:" + bean.curPackageSize);
 				throw new DecodeException(e);
