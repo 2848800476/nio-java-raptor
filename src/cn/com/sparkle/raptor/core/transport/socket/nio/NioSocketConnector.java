@@ -31,6 +31,7 @@ public class NioSocketConnector {
 		this.multNioSocketProcessor = new MultNioSocketProcessor(nscfg);
 		selector = Selector.open();
 		Thread t = new Thread(new Connector());
+		t.setName("Raptor-Nio-Connector");
 		t.setDaemon(nscfg.isDaemon());
 		t.start();
 		checkRegisterConnecter = new DelayChecked(

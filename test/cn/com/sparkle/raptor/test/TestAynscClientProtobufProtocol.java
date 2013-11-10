@@ -34,23 +34,26 @@ public class TestAynscClientProtobufProtocol {
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		nsc.setTcpNoDelay(true);
 		nsc.setProcessorNum(1);
-		nsc.setCycleRecieveBuffCellSize(1000);
-		nsc.setReuseAddress(true);
+		nsc.setCycleRecieveBuffCellSize(10000);
+//		nsc.setReuseAddress(true);
 		
 		NioSocketClient client = new NioSocketClient(nsc);
 		
 		ProtoBufProtocol protocol = new ProtoBufProtocol();
 		protocol.registerMessage(1, PersonMessage.AddressBook.getDefaultInstance());
+		protocol.registerMessage(2, PersonMessage.Person.getDefaultInstance());
 		
 		TestAynscClientProtobufProtocolHandler ih = new TestAynscClientProtobufProtocolHandler();
-		IoHandler handler = new MultiThreadProtecolHandler(10000, 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, ih);
+		IoHandler handler = new MultiThreadProtecolHandler(5000, 16 * 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, ih);
 		for(int i = 0 ; i < 1 ; i++){
 //		while(true){
 			WaitFinishConnect wfc = new WaitFinishConnect();
 //			client.connect(new InetSocketAddress("10.10.83.243",1234), handler,"aaa" + i);
 //			client.connect(new InetSocketAddress("192.168.3.100",1234),handler,"aaa" + i );
-		
+			
+//			client.connect(new InetSocketAddress("10.238.130.23",1234),handler, wfc);
 			client.connect(new InetSocketAddress("127.0.0.1",1234),handler, wfc);
+//			client.connect(new InetSocketAddress("10.232.35.11",1234), handler,wfc);
 //			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );
 //			wfc.count.await();
 //			Person.Builder builder = Person.newBuilder().setId(1).setName(ih.soure);
@@ -68,7 +71,14 @@ class WaitFinishConnect{
 }
 class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 	private static AtomicInteger flag = new AtomicInteger(0);
-	public String soure = "ÄãºÃ£¡Mr server !This is client  cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc             !write package";
+	public String origin = "ÄãºÃ£¡Mr server !This is client  cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc             !write package";
+	public String soure = "";
+	
+	public TestAynscClientProtobufProtocolHandler(){
+		for(int i = 0 ; i < 1 ; i++){
+			soure += origin;
+		}
+	}
 	
 	private LinkedList<CountDownLatch> l = new LinkedList<CountDownLatch>();
 	private ReentrantLock llock = new ReentrantLock();
@@ -94,6 +104,9 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 		WaitFinishConnect wfc = (WaitFinishConnect)session.customAttachment;
 		wfc.session = session;
 		wfc.count.countDown();
+		Person.Builder builder = Person.newBuilder().setId(0).setName(soure);
+		AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
+		System.out.println("size" + ab.build().getSerializedSize());
 		
 		for(int i = 0 ; i < 1; i++){
 		Thread t = new Thread(){
@@ -103,8 +116,9 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 				while(true){
 					try {
 						Person.Builder builder = Person.newBuilder().setId(++i).setName(soure);
-						AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
-						CountDownLatch c = send(ab.build(),session);
+//						AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
+						CountDownLatch c = send(builder.build(),session);
+//						c.await();
 					} catch (Exception e) {
 						e.printStackTrace();
 						break;
@@ -137,6 +151,8 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 //	} catch (SessionHavaClosedException e) {
 //		e.printStackTrace();
 //	}
+		Person p = (Person)receiveObject;
+//		System.out.println(p.getId());
 		try{
 			llock.lock();
 			l.removeFirst().countDown();

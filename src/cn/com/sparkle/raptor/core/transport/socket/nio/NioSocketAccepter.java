@@ -34,6 +34,7 @@ public class NioSocketAccepter {
 		this.multNioSocketProcessor = new MultNioSocketProcessor(nscfg);
 		selector = Selector.open();
 		Thread t = new Thread(new Accepter());
+		t.setName("Raptor-Nio-Acceptor");
 		t.setDaemon(nscfg.isDaemon());
 		t.start();
 	}

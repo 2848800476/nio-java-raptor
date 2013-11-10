@@ -24,15 +24,15 @@ public class TestServerByteProtocol {
 	public static void main(String[] args) throws IOException, QueueFullException {
 		// TODO Auto-generated method stub
 		NioSocketConfigure nsc = new NioSocketConfigure();
-		nsc.setProcessorNum(2);
-		nsc.setCycleRecieveBuffCellSize(1000);
+		nsc.setProcessorNum(1);
+		nsc.setCycleRecieveBuffCellSize(10000);
 		nsc.setTcpNoDelay(true);
 //		nsc.setRecieveBuffSize(32* 1024);
 //		nsc.setSentBuffSize( 8 * 1024);
 		//nsc.setRevieveBuffSize(1024 * 2048);
 		//nsc.setTcpNoDelay(true);
 		NioSocketServer server = new NioSocketServer(nsc);
-		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(50000, 512, 20, 300, 60, TimeUnit.SECONDS,new ByteProtocol(256), new TestByteProtocolHandler()));
+		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(50000, 512, 20, 300, 60, TimeUnit.SECONDS,new ByteProtocol(128), new TestByteProtocolHandler()));
 //		server.bind(new InetSocketAddress(12345),new FilterChain(new TestHandler()));
 	}
 	
@@ -45,7 +45,7 @@ class TestByteProtocolHandler implements ProtocolHandler{
 	public void onOneThreadMessageRecieved(Object receiveObject,
 			ProtocolHandlerIoSession session) {
 		try {
-			session.writeObject( "ÄãºÃ£¡Mr client!This is server!" + (++i));
+			session.writeObject("1");
 		} catch (SessionHavaClosedException e) {
 		}
 	}

@@ -39,6 +39,7 @@ public class TestBlockSocketClient {
 				
 				byte[] b = new byte[128];
 				while (true) {
+//				for(int i = 0 ; i < 1 ; i++){
 					os.write(b);
 					os.flush();
 
