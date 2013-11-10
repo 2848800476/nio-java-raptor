@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 import cn.com.sparkle.raptor.core.buff.AllocateBytesBuff;
+import cn.com.sparkle.raptor.core.buff.CycleBuff;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.buff.QuoteBytesBuff;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
@@ -53,8 +54,10 @@ class TestClientHandler implements IoHandler {
 	int cc = 0;
 	@Override
 	public void onMessageRecieved(IoSession session, IoBuffer message) {
-		message.getByteBuffer().position(message.getByteBuffer().limit());
 		
+		if(message instanceof CycleBuff){
+			((CycleBuff)message).close();
+		}
 //		System.out.println("client recieve");
 //		Integer size = (Integer)session.attachment();
 //		if(size == null) size = 0;

@@ -29,8 +29,8 @@ public class TestServerProtobufProtocol {
 	public static void main(String[] args) throws IOException, QueueFullException {
 		// TODO Auto-generated method stub
 		NioSocketConfigure nsc = new NioSocketConfigure();
-		nsc.setProcessorNum(1);
-		nsc.setCycleRecieveBuffCellSize(1000);
+		nsc.setProcessorNum(2);
+		nsc.setCycleRecieveBuffCellSize(10000);
 		nsc.setTcpNoDelay(true);
 		nsc.setReuseAddress(true);
 //		nsc.setRecieveBuffSize(32* 1024);
@@ -39,10 +39,9 @@ public class TestServerProtobufProtocol {
 		//nsc.setTcpNoDelay(true);
 		ProtoBufProtocol protocol = new ProtoBufProtocol();
 		protocol.registerMessage(1, PersonMessage.AddressBook.getDefaultInstance());
-		
-		
+		protocol.registerMessage(2, PersonMessage.Person.getDefaultInstance());
 		NioSocketServer server = new NioSocketServer(nsc);
-		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(10000, 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, new ProtobufProtocolHandler()));
+		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(5000,16 * 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, new ProtobufProtocolHandler()));
 //		server.bind(new InetSocketAddress(12345),new FilterChain(new TestHandler()));
 	}
 	
@@ -55,9 +54,12 @@ class ProtobufProtocolHandler implements ProtocolHandler{
 	public void onOneThreadMessageRecieved(Object receiveObject,
 			ProtocolHandlerIoSession session) {
 		try {
-			Person.Builder builder = Person.newBuilder().setId(++i).setName(soure);
+			Person p = (Person)receiveObject;
+//			System.out.println(p.getId());
+			
+			Person.Builder builder = Person.newBuilder().setId(p.getId()).setName(soure);
 			AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
-			session.writeObject( ab.build());
+			session.writeObject( builder.build() );
 //			session.writeObject("ÄãºÃ£¡");
 		} catch (SessionHavaClosedException e) {
 		}

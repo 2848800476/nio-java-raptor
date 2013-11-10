@@ -29,7 +29,7 @@ public class TestAynscClientByteProtocol {
 		nsc.setCycleRecieveBuffCellSize(1000);
 //		nsc.setRecieveBuffSize(8 * 1024);
 		NioSocketClient client = new NioSocketClient(nsc);
-		IoHandler handler = new MultiThreadProtecolHandler(1000,  8*1024, 20, 300, 60, TimeUnit.SECONDS,new ByteProtocol(256), new TestAsyncByteObjetClientHandler());
+		IoHandler handler = new MultiThreadProtecolHandler(1000,  8*1024, 20, 300, 60, TimeUnit.SECONDS,new ByteProtocol(128), new TestAsyncByteObjetClientHandler());
 		for(int i = 0 ; i < 1; i++){
 //			client.connect(new InetSocketAddress("10.10.83.243",1234), handler,"aaa" + i);
 //			client.connect(new InetSocketAddress("192.168.3.100",1234),handler,"aaa" + i );

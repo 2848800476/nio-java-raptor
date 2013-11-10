@@ -24,6 +24,7 @@ public class TimeUtil {
 	static {
 		curtime = System.currentTimeMillis();
 		TimerThread t = new TimerThread();
+		t.setName("Raptor-Timer-Clock");
 		t.setDaemon(true);
 		t.start();
 	}

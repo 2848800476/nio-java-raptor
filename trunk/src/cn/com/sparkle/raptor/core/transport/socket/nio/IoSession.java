@@ -42,7 +42,7 @@ public class IoSession {
 	private AtomicInteger isGetLast = new AtomicInteger(0);
 
 	private AtomicInteger registerBarrier = new AtomicInteger(0);
-
+	
 	public IoSession(NioSocketProcessor processor, SocketChannel channel,
 			IoHandler handler) {
 		this.processor = processor;
@@ -78,6 +78,7 @@ public class IoSession {
 	}
 	
 	public void suspendRead() {
+//		logger.debug(this.getRemoteAddress() + " suspendRead");
 		if(!isSuspendRead){
 			isSuspendRead = true;
 			processor.unRegisterRead(this);
@@ -85,6 +86,7 @@ public class IoSession {
 	}
 
 	public void continueRead() {
+//		logger.debug(this.getRemoteAddress() + " continueRead");
 		if(isSuspendRead){
 			isSuspendRead = false;
 			processor.registerRead(this);
@@ -131,14 +133,7 @@ public class IoSession {
 		int i = 0 ;
 		while (true) {
 			i++;
-//			if(i > 300){
-//				processor.debug = true;
-//			}
 			if (tryWrite(message)) {
-//				if(i > 20){
-//					System.out.println("more loop time " + i);
-//				}
-//				processor.debug = false;
 				break;
 			}
 			try {
@@ -235,7 +230,12 @@ public class IoSession {
 		} catch (IOException e) {
 		}
 	}
-
+	public String getRemoteAddress(){
+			return channel.socket().getRemoteSocketAddress().toString();
+	}
+	public String getLocalAddress(){
+		return channel.socket().getLocalAddress().toString();
+	}
 	public Entity<IoSession> getLastAccessTimeLinkedListwrapSession() {
 		lastActiveTime = TimeUtil.currentTimeMillis();
 		return lastAccessTimeLinkedListwrapSession;

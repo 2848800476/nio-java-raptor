@@ -6,6 +6,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import cn.com.sparkle.raptor.core.buff.AllocateBytesBuff;
+import cn.com.sparkle.raptor.core.buff.CycleBuff;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue.QueueFullException;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
@@ -27,7 +28,7 @@ public class TestServer {
 		
 		//nsc.setSentBuffSize(1024);
 		//nsc.setRevieveBuffSize(1024 * 2048);
-		nsc.setReuseAddress(true);
+//		nsc.setReuseAddress(true);
 		nsc.setTcpNoDelay(true);
 		nsc.setProcessorNum(2);
 		
@@ -56,15 +57,29 @@ class TestHandler implements IoHandler{
 //		IoBuffer temp = new AllocateBytesBuff(128,false);
 //		temp.getByteBuffer().position(temp.getByteBuffer().limit());
 		
+//		System.out.println(message.getByteBuffer().remaining());
 		IoBuffer temp = new AllocateBytesBuff(message.getByteBuffer().remaining(),false);
-		message.getByteBuffer().position(message.getByteBuffer().limit());
-		temp.getByteBuffer().position(temp.getByteBuffer().limit());
-		try {
-			session.tryWrite(temp);
-		} catch (SessionHavaClosedException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+		if(message instanceof CycleBuff){
+			((CycleBuff)message).close();
 		}
+//		temp.getByteBuffer().position(temp.getByteBuffer().limit());
+//		try {
+//			session.write(temp);
+//		} catch (SessionHavaClosedException e1) {
+//			// TODO Auto-generated catch block
+//			e1.printStackTrace();
+//		}
+		long c = System.currentTimeMillis();
+		try {
+			while(temp.getByteBuffer().hasRemaining()){
+				session.getChannel().write(temp.getByteBuffer());
+				
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println(System.currentTimeMillis() - c);
 //		try {
 //			session.getChannel().write(ByteBuffer.wrap(b));
 //		} catch (IOException e) {
