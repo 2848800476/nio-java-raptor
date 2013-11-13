@@ -33,7 +33,6 @@ public class TestServerProtobufProtocol {
 		nsc.setCycleRecieveBuffCellSize(10000);
 		nsc.setTcpNoDelay(true);
 		nsc.setReuseAddress(true);
-		nsc.setAsyncTransportOptimize(true);
 //		nsc.setRecieveBuffSize(32* 1024);
 //		nsc.setSentBuffSize( 8 * 1024);
 		//nsc.setRevieveBuffSize(1024 * 2048);
