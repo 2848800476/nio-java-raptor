@@ -22,6 +22,7 @@ public class NioSocketConfigure {
 	private boolean isDaemon = false;
 	private int cycleRecieveBuffCellSize = 20000;
 	private int soTimeOut = 500;
+	private boolean asyncTransportOptimize = false;
 
 	public int getCycleRecieveBuffCellSize() {
 		return cycleRecieveBuffCellSize;
@@ -29,6 +30,14 @@ public class NioSocketConfigure {
 
 	public int getSoTimeOut() {
 		return soTimeOut;
+	}
+	
+	public boolean isAsyncTransportOptimize() {
+		return asyncTransportOptimize;
+	}
+
+	public void setAsyncTransportOptimize(boolean asyncTransportOptimize) {
+		this.asyncTransportOptimize = asyncTransportOptimize;
 	}
 
 	public void setSoTimeOut(int soTimeOut) {

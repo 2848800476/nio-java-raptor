@@ -32,7 +32,7 @@ public class TestServerByteProtocol {
 		//nsc.setRevieveBuffSize(1024 * 2048);
 		//nsc.setTcpNoDelay(true);
 		NioSocketServer server = new NioSocketServer(nsc);
-		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(50000, 512, 20, 300, 60, TimeUnit.SECONDS,new ByteProtocol(128), new TestByteProtocolHandler()));
+		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(5000, 16 * 1024, 20, 300, 60, TimeUnit.SECONDS,new ByteProtocol(128), new TestByteProtocolHandler()));
 //		server.bind(new InetSocketAddress(12345),new FilterChain(new TestHandler()));
 	}
 	
