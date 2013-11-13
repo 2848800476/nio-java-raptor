@@ -1,6 +1,10 @@
 package cn.com.sparkle.raptor.core.transport.socket.nio;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
@@ -105,18 +109,83 @@ public class IoSession {
 //		
 //	}
 
+//	public boolean tryWrite(IoBuffer message) throws SessionHavaClosedException {
+//		// this progress of lock is necessary,because the method tryWrite will
+//		// be invoked in many different threads
+//		
+//		
+//		if (isClose) {
+//			throw new SessionHavaClosedException("IoSession have closed!");
+//		}
+//		if(!waitSendQueueList.hasRemain()){
+//			return false;
+//		}
+//		ByteBuffer buffer = message.getByteBuffer().asReadOnlyBuffer();
+//		buffer.limit(buffer.position()).position(0);
+//		if(!processor.getNioSocketConfigure().isAsyncTransportOptimize() && waitSendQueueList.size() == 0){
+//			//try send right now
+//			try {
+//				channel.write(buffer);
+//			} catch (IOException e) {
+//				this.closeSocketChannel();
+//				throw new SessionHavaClosedException("IoSession have closed!");
+//			}
+//			if(!buffer.hasRemaining()){
+//				if(message instanceof CycleBuff){
+//					((CycleBuff)message).close();
+//				}
+//				return true;
+//			}
+//		}
+//		
+//		int flag = registerBarrier.getAndSet(2);
+//			try {
+//				waitSendQueueList.push(message);
+//				waitSendQueue.push(buffer);
+//			} catch (QueueFullException e) {
+//				throw new RuntimeException("fatal error",e);
+//			}
+//			if(flag == 0){
+//				processor.registerWrite(this);
+//			}
+//		return true;
+//	}
 	public boolean tryWrite(IoBuffer message) throws SessionHavaClosedException {
+		return tryWrite(message,true);
+	}
+	public boolean tryWrite(IoBuffer message,boolean flush) throws SessionHavaClosedException {
 		// this progress of lock is necessary,because the method tryWrite will
 		// be invoked in many different threads
+		
+		
 		if (isClose) {
 			throw new SessionHavaClosedException("IoSession have closed!");
 		}
 		if(!waitSendQueueList.hasRemain()){
 			return false;
 		}
+		
+		ByteBuffer buffer = message.getByteBuffer().asReadOnlyBuffer();
+		buffer.limit(buffer.position()).position(0);
+		if(flush && waitSendQueueList.size() == 0){
+			//try send right now
+			try {
+				channel.write(buffer);
+			} catch (IOException e) {
+				this.closeSocketChannel();
+				throw new SessionHavaClosedException("IoSession have closed!");
+			}
+			if(!buffer.hasRemaining()){
+				handler.onMessageSent(this, message);
+//				if(message instanceof CycleBuff){
+//					((CycleBuff)message).close();
+//				}
+				return true;
+			}
+		}
+		
 		int flag = registerBarrier.getAndSet(2);
-			ByteBuffer buffer = message.getByteBuffer().asReadOnlyBuffer();
-			buffer.limit(buffer.position()).position(0);
+		
 			try {
 				waitSendQueueList.push(message);
 				waitSendQueue.push(buffer);
@@ -128,12 +197,27 @@ public class IoSession {
 			}
 		return true;
 	}
- 
+//	public void write(IoBuffer message) throws SessionHavaClosedException {
+//		int i = 0 ;
+//		while (true) {
+//			i++;
+//			if (tryWrite(message)) {
+//				break;
+//			}
+//			try {
+//				Thread.sleep(1);
+//			} catch (InterruptedException e) {
+//			}
+//		}
+//	}
 	public void write(IoBuffer message) throws SessionHavaClosedException {
+		write(message,true);
+	}
+	public void write(IoBuffer message,boolean flush) throws SessionHavaClosedException {
 		int i = 0 ;
 		while (true) {
 			i++;
-			if (tryWrite(message)) {
+			if (tryWrite(message,flush)) {
 				break;
 			}
 			try {
@@ -231,10 +315,12 @@ public class IoSession {
 		}
 	}
 	public String getRemoteAddress(){
-			return channel.socket().getRemoteSocketAddress().toString();
+		SocketAddress address = channel.socket().getRemoteSocketAddress();
+		return address == null ?"": address.toString();
 	}
 	public String getLocalAddress(){
-		return channel.socket().getLocalAddress().toString();
+		InetAddress address = channel.socket().getLocalAddress();
+		return address == null ?"": address.toString();
 	}
 	public Entity<IoSession> getLastAccessTimeLinkedListwrapSession() {
 		lastActiveTime = TimeUtil.currentTimeMillis();

@@ -276,14 +276,16 @@ public class MultiThreadProtecolHandler implements IoHandler {
 			}
 			attachment.unFinishedList.removeFirst();
 		}*/
-		
+		final ProtocolHandlerIoSession attachment = (ProtocolHandlerIoSession) session
+				.attachment();
+		attachment.recivePackageCount = (attachment.recivePackageCount + 1) % Integer.MAX_VALUE;
+		final int recivePackageCount = attachment.recivePackageCount;
 			Do<IoBuffer> jobDo = new Do<IoBuffer>() {
 				@Override
 				public void doJob(IoSession session) {
 					try {
-						ProtocolHandlerIoSession attachment = (ProtocolHandlerIoSession) session
-								.attachment();
 						Object obj = null;
+						attachment.targetRecivePackageCount = recivePackageCount;
 						synchronized (session) {
 							while (message.getByteBuffer().hasRemaining()
 									&& (obj = protocol.decode(attachment, message)) != null) {
@@ -323,11 +325,11 @@ public class MultiThreadProtecolHandler implements IoHandler {
 
 	@Override
 	public void onMessageSent(IoSession session, IoBuffer message) {
+		SentJob jobDo = new SentJob();
+		jobDo.o = message.getByteBuffer().limit();
 		if (message instanceof CycleBuff) {
 			((CycleBuff) message).close();
 		}
-		SentJob jobDo = new SentJob();
-		jobDo.o = message.getByteBuffer().remaining();
 		runOrWaitInQueue(jobDo, session);
 	}
 
@@ -396,6 +398,8 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		private LinkedList<IoBuffer> unFinishedList = new LinkedList<IoBuffer>();
 		public Object protocolAttachment;
 		public Object customAttachment;
+		private volatile int recivePackageCount = 0;
+		private int targetRecivePackageCount = 0;
 
 		private ReentrantLock writeLock = new ReentrantLock();
 
@@ -453,11 +457,11 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		}
 
 		@Override
-		public boolean tryWrite(IoBuffer message)
+		public boolean tryWrite(IoBuffer message,boolean flush)
 				throws SessionHavaClosedException {
 			try {
 				writeLock.lock();
-				return session.tryWrite(message);
+				return session.tryWrite(message,flush);
 			} catch (SessionHavaClosedException e) {
 				if (message instanceof CycleBuff) {
 					((CycleBuff) message).close();
@@ -469,11 +473,26 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		}
 
 		@Override
+		public void write(IoBuffer message,boolean flush) throws SessionHavaClosedException {
+
+			try {
+				writeLock.lock();
+				session.write(message,flush);
+			} catch (SessionHavaClosedException e) {
+				if (message instanceof CycleBuff) {
+					((CycleBuff) message).close();
+				}
+				throw e;
+			} finally {
+				writeLock.unlock();
+			}
+		}
+		@Override
 		public void write(IoBuffer message) throws SessionHavaClosedException {
 
 			try {
 				writeLock.lock();
-				session.write(message);
+				session.write(message,targetRecivePackageCount == recivePackageCount);
 			} catch (SessionHavaClosedException e) {
 				if (message instanceof CycleBuff) {
 					((CycleBuff) message).close();
@@ -521,7 +540,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 						for (int i = 0; i < buffs.length; ++i) {
 							try {
 								totalSize += buffs[i].getByteBuffer().position();
-								session.write(buffs[i]);
+								session.write(buffs[i],targetRecivePackageCount == recivePackageCount);
 							} catch (SessionHavaClosedException e) {
 								for (; i < buffs.length; ++i) {
 									if (buffs[i] instanceof CycleBuff) {
