@@ -4,12 +4,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
+import java.util.NoSuchElementException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+
 
 
 
@@ -374,7 +376,13 @@ public class MultiThreadProtecolHandler implements IoHandler {
 							session.continueRead();
 						}
 //						System.out.println(mySession.jobQueue.size());
-						jobDo = mySession.jobQueue.removeFirst();
+						try{
+							jobDo = mySession.jobQueue.removeFirst();
+						}catch(NoSuchElementException e){
+							System.out.println(mySession.jobQueue.isEmpty());
+							System.out.println(mySession.jobQueue.size());
+							throw e;
+						}
 						
 					} else {
 						mySession.isExecuting = false;
