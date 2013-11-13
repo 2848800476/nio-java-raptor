@@ -175,13 +175,10 @@ public class IoSession {
 				this.closeSocketChannel();
 				throw new SessionHavaClosedException("IoSession have closed!");
 			}
-			if(!buffer.hasRemaining()){
-				handler.onMessageSent(this, message);
-//				if(message instanceof CycleBuff){
-//					((CycleBuff)message).close();
-//				}
-				return true;
-			}
+//			if(!buffer.hasRemaining()){
+//				handler.onMessageSent(this, message);
+//				return true;
+//			}
 		}
 		
 		int flag = registerBarrier.getAndSet(2);

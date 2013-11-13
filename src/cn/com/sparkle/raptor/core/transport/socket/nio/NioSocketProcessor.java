@@ -444,12 +444,12 @@ public class NioSocketProcessor {
 														.onMessageSent(session,
 																buffer);
 											} else {
-												sendSize = 1;// avoid session be
-																// pushed into
-																// reRegisterQueueWrite
 												isClearWrite = true;
 												break;
 											}
+											sendSize = 1;// avoid session be
+											// pushed into
+											// reRegisterQueueWrite
 										} else {
 											break;
 										}
