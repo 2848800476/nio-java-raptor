@@ -79,12 +79,13 @@ class TestAsyncByteObjetClientHandler implements ProtocolHandler{
 				while(true){
 					try {
 						CountDownLatch c = send(test, session);
-						
 //						c.await();
 					} catch (SessionHavaClosedException e) {
 						e.printStackTrace();
 						break;
-					} 
+					} catch(Exception e){
+						e.printStackTrace();
+					}
 //					catch (InterruptedException e) {
 //						e.printStackTrace();
 //					}
