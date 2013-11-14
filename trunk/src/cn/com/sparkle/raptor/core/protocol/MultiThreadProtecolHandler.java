@@ -288,34 +288,31 @@ public class MultiThreadProtecolHandler implements IoHandler {
 					try {
 						Object obj = null;
 						attachment.targetRecivePackageCount = recivePackageCount;
-						synchronized (session) {
-							while (message.getByteBuffer().hasRemaining()
-									&& (obj = protocol.decode(attachment, message)) != null) {
-								handler.onOneThreadMessageRecieved(obj,
-										attachment);
+								while (message.getByteBuffer().hasRemaining()
+										&& (obj = protocol.decode(attachment, message)) != null) {
+									handler.onOneThreadMessageRecieved(obj,
+											attachment);
+								}
+							
+							if (message.getByteBuffer().hasRemaining()) {
+								attachment.unFinishedList.addLast(message);
+							}else{
+								if(message instanceof CycleBuff){
+									((CycleBuff)message).close();
+								}
 							}
-						
-						if (message.getByteBuffer().hasRemaining()) {
-							attachment.unFinishedList.addLast(message);
-						}else{
-							if(message instanceof CycleBuff){
-								((CycleBuff)message).close();
+							// clear finished IoBuffer
+							while (attachment.unFinishedList.size() > 0
+									&& !attachment.unFinishedList.getFirst().getByteBuffer()
+											.hasRemaining()) {
+								if (attachment.unFinishedList.getFirst() instanceof CycleBuff) {
+									((CycleBuff) attachment.unFinishedList.getFirst()).close();
+		
+								} else {
+									// logger.debug("close new create mem");
+								}
+								attachment.unFinishedList.removeFirst();
 							}
-						}
-						// clear finished IoBuffer
-						while (attachment.unFinishedList.size() > 0
-								&& !attachment.unFinishedList.getFirst().getByteBuffer()
-										.hasRemaining()) {
-							if (attachment.unFinishedList.getFirst() instanceof CycleBuff) {
-								((CycleBuff) attachment.unFinishedList.getFirst()).close();
-	
-							} else {
-								// logger.debug("close new create mem");
-							}
-							attachment.unFinishedList.removeFirst();
-						}
-						}
-						
 						
 					} catch (IOException e) {
 						logger.error("fatal error", e);

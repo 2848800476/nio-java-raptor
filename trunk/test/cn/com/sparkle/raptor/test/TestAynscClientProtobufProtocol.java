@@ -34,7 +34,7 @@ public class TestAynscClientProtobufProtocol {
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		nsc.setTcpNoDelay(true);
 		nsc.setProcessorNum(1);
-		nsc.setCycleRecieveBuffCellSize(10000);
+		nsc.setCycleRecieveBuffCellSize(1000);
 //		nsc.setReuseAddress(true);
 		
 		NioSocketClient client = new NioSocketClient(nsc);
