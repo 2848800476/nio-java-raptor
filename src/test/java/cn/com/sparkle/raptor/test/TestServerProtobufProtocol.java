@@ -48,7 +48,16 @@ public class TestServerProtobufProtocol {
 }
 class ProtobufProtocolHandler implements ProtocolHandler{
 	private int i = 0;
-	private String soure = "ÄãºÃ£¡Mr server !This is client  cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc             !write package";
+	private String soure = "";
+	public String origin = "ÄãºÃ£¡Mr server !This is client  cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc             !write package";
+	public ProtobufProtocolHandler(){
+		for(int i = 0 ; i < 9 ; i++){
+			soure += origin;
+		}
+		Person.Builder builder = Person.newBuilder().setId(2).setName(soure);
+//		AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
+//		System.out.println("size:" + builder.build().getSerializedSize());
+	}
 
 	@Override
 	public void onOneThreadMessageRecieved(Object receiveObject,
@@ -58,7 +67,7 @@ class ProtobufProtocolHandler implements ProtocolHandler{
 //			System.out.println(p.getId());
 			
 			Person.Builder builder = Person.newBuilder().setId(p.getId()).setName(soure);
-			AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
+//			AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
 			session.writeObject( builder.build() );
 //			session.writeObject("ÄãºÃ£¡");
 		} catch (SessionHavaClosedException e) {

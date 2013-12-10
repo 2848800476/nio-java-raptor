@@ -10,8 +10,11 @@ import cn.com.sparkle.raptor.core.handler.IoHandler;
 public class NioSocketServer {
 	private NioSocketAccepter accepter;
 
+	public NioSocketServer(NioSocketConfigure nsc,String name) throws IOException {
+		accepter = new NioSocketAccepter(nsc,name);
+	}
 	public NioSocketServer(NioSocketConfigure nsc) throws IOException {
-		accepter = new NioSocketAccepter(nsc);
+		this(nsc,"defaultserver");
 	}
 
 	public void bind(InetSocketAddress address, IoHandler handler)

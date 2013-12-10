@@ -10,11 +10,11 @@ public class MultNioSocketProcessor {
 	NioSocketProcessor[] nioSocketProcessors;
 	int currentFlag = 0;
 
-	public MultNioSocketProcessor(NioSocketConfigure nscfg) throws IOException {
+	public MultNioSocketProcessor(NioSocketConfigure nscfg,String name) throws IOException {
 		nioSocketProcessors = new NioSocketProcessor[nscfg.getProcessorNum()];
 		SyncBuffPool mempool = new SyncBuffPool(nscfg.getCycleRecieveBuffCellSize(), nscfg.getRecieveBuffSize() * 2 / 3);
 		for (int i = 0; i < nscfg.getProcessorNum(); i++) {
-			nioSocketProcessors[i] = new NioSocketProcessor(nscfg,mempool);
+			nioSocketProcessors[i] = new NioSocketProcessor(nscfg,mempool,name);
 		}
 	}
 

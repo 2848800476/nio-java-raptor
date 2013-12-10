@@ -6,6 +6,9 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue;
 import cn.com.sparkle.raptor.core.delaycheck.DelayChecked;
@@ -17,21 +20,37 @@ public class NioSocketConnector {
 	private MultNioSocketProcessor multNioSocketProcessor;
 	NioSocketConfigure nscfg;
 	private MaximumSizeArrayCycleQueue<QueueBean> waitConnectQueue = new MaximumSizeArrayCycleQueue<NioSocketConnector.QueueBean>(
-			NioSocketConnector.QueueBean.class, 100000);
+			NioSocketConnector.QueueBean.class, 10000);
 	private DelayChecked checkRegisterConnecter;
+	
+	private Runnable nullRunnable = new Runnable() {
+		@Override
+		public void run() {
+		}
+	};
 
 	private class QueueBean {
 		SocketChannel sc;
 		IoHandler handler;
 		Object attachment;
+		ConnectFuture<Boolean> future;
+		IoSession session;
+	}
+	public static class ConnectFuture<Boolean> extends FutureTask<Boolean>{
+		public ConnectFuture(Runnable runnable, Boolean result) {
+			super(runnable, result);
+		}
+		public void setResult(Boolean v) {
+			super.set(v);
+		}
 	}
 
-	public NioSocketConnector(NioSocketConfigure nscfg) throws IOException {
+	public NioSocketConnector(NioSocketConfigure nscfg,String name) throws IOException {
 		this.nscfg = nscfg;
-		this.multNioSocketProcessor = new MultNioSocketProcessor(nscfg);
+		this.multNioSocketProcessor = new MultNioSocketProcessor(nscfg,name);
 		selector = Selector.open();
 		Thread t = new Thread(new Connector());
-		t.setName("Raptor-Nio-Connector");
+		t.setName("Raptor-Nio-Connector " + name);
 		t.setDaemon(nscfg.isDaemon());
 		t.start();
 		checkRegisterConnecter = new DelayChecked(
@@ -44,21 +63,20 @@ public class NioSocketConnector {
 		DelayCheckedTimer.addDelayCheck(checkRegisterConnecter);
 	}
 
-	public void registerConnector(SocketChannel sc, IoHandler handler)
-			throws Exception {
-		registerConnector(sc, handler, null);
-	}
-
-	public void registerConnector(SocketChannel sc, IoHandler handler,
+	public Future<Boolean> registerConnector(SocketChannel sc, IoHandler handler,
 			Object attachment) throws Exception {
+		ConnectFuture<Boolean> futureTask = new ConnectFuture<Boolean>(nullRunnable,true);
 		QueueBean a = new QueueBean();
 		a.handler = handler;
 		a.sc = sc;
 		a.attachment = attachment;
+		a.future = futureTask;
 		waitConnectQueue.push(a);
 		checkRegisterConnecter.needRun();
+		
+		return a.future;
 	}
-
+	
 	class Connector implements Runnable {
 		public void run() {
 			while (true) {
@@ -75,10 +93,11 @@ public class NioSocketConnector {
 							.getProcessor();
 					IoSession session = new IoSession(processor, qb.sc,
 							qb.handler);
+					qb.session = session;
 					session.attach(qb.attachment);
 					try {
 						qb.sc.register(selector, SelectionKey.OP_CONNECT,
-								session);
+								qb);
 					} catch (ClosedChannelException e) {
 						qb.handler.catchException(session, e);
 					}
@@ -95,20 +114,25 @@ public class NioSocketConnector {
 						if (key.isConnectable()) {
 							key.cancel();
 							SocketChannel sc = (SocketChannel) key.channel();
-							IoSession session = (IoSession) key.attachment();
+							QueueBean queueBean = (QueueBean) key.attachment();
 							try {
 								if (sc.finishConnect()) {
-									session.getProcessor()
-											.registerRead(session);
-									session.getHandler().onSessionOpened(
-											session);
+									queueBean.session.getProcessor()
+											.registerRead(queueBean.session);
+									queueBean.session.getHandler().onSessionOpened(
+											queueBean.session);
+									queueBean.future.setResult(true);
+									queueBean.future.run();
 								}
 							} catch (Exception e) {
-								session.getHandler().catchException(session, e);
+								queueBean.future.setResult(false);
+								queueBean.future.run();
+								queueBean.session.getHandler().catchException(queueBean.session, e);
 								try {
 									sc.close();
 								} catch (Exception ee) {
 								}
+								
 							}
 						}
 					}
