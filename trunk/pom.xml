@@ -2,12 +2,17 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>raptor</groupId>
   <artifactId>raptor</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>1.0.10alpha-SNAPSHOT</version>
   <dependencies>
   	<dependency>
   		<groupId>log4j</groupId>
   		<artifactId>log4j</artifactId>
   		<version>1.2.16</version>
   	</dependency>
+  	<dependency>
+			<groupId>com.google.protobuf</groupId>
+			<artifactId>protobuf-java</artifactId>
+			<version>2.5.0</version>
+		</dependency>
   </dependencies>
 </project>

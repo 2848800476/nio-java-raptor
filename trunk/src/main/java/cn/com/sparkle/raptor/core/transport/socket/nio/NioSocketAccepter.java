@@ -29,12 +29,12 @@ public class NioSocketAccepter {
 		IoHandler handler;
 	}
 
-	public NioSocketAccepter(NioSocketConfigure nscfg) throws IOException {
+	public NioSocketAccepter(NioSocketConfigure nscfg,String name) throws IOException {
 		this.nscfg = nscfg;
-		this.multNioSocketProcessor = new MultNioSocketProcessor(nscfg);
+		this.multNioSocketProcessor = new MultNioSocketProcessor(nscfg,name);
 		selector = Selector.open();
 		Thread t = new Thread(new Accepter());
-		t.setName("Raptor-Nio-Acceptor");
+		t.setName("Raptor-Nio-Acceptor " + name);
 		t.setDaemon(nscfg.isDaemon());
 		t.start();
 	}

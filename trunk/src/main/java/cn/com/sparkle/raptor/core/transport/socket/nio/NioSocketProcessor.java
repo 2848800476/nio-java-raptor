@@ -38,11 +38,11 @@ public class NioSocketProcessor {
 	private ReentrantLock readLock = new ReentrantLock();
 
 	private Queue<IoSession> registerQueueWrite = new MaximumSizeArrayCycleQueue<IoSession>(
-			IoSession.class, 100000);
+			IoSession.class, 1000);
 	private Queue<ReadInterest> registerQueueRead = new MaximumSizeArrayCycleQueue<ReadInterest>(
-			ReadInterest.class, 100000);
+			ReadInterest.class, 1000);
 	private Queue<IoSession> reRegisterQueueWrite = new MaximumSizeArrayCycleQueue<IoSession>(
-			IoSession.class, 300000);
+			IoSession.class, 10000);
 	private CycleAllocateBytesBuffPool memPool;
 
 	private final static class ReadInterest {
@@ -68,7 +68,7 @@ public class NioSocketProcessor {
 	private DelayChecked checkReRegisterWrite;
 	private DelayChecked checkTimeoutSession;
 
-	public NioSocketProcessor(NioSocketConfigure nscfg, SyncBuffPool memPool)
+	public NioSocketProcessor(NioSocketConfigure nscfg, SyncBuffPool memPool,String name)
 			throws IOException {
 
 		this.nscfg = nscfg;
@@ -88,7 +88,7 @@ public class NioSocketProcessor {
 
 		Thread t = new Thread(new Processor());
 		t.setDaemon(true);
-		t.setName("Raptor-Nio-Processor");
+		t.setName("Raptor-Nio-Processor " + name );
 		t.start();
 		checkRegisterRead = new DelayChecked(nscfg.getRegisterReadDelay()) {
 			@Override
@@ -258,8 +258,8 @@ public class NioSocketProcessor {
 							key = session.getChannel().register(selector,
 									SelectionKey.OP_WRITE);
 							key.attach(session);
-							activeSessionLinedLinkedList.putOrMoveFirst(session
-									.getLastAccessTimeLinkedListwrapSession());
+//							activeSessionLinedLinkedList.putOrMoveFirst(session
+//									.getLastAccessTimeLinkedListwrapSession());
 						} catch (ClosedChannelException e) {
 							activeSessionLinedLinkedList.remove(session
 									.getLastAccessTimeLinkedListwrapSession());
@@ -269,8 +269,8 @@ public class NioSocketProcessor {
 					} else {
 						key.attach(session);
 						changeInterestWrite(key, true, session);
-						activeSessionLinedLinkedList.putOrMoveFirst(session
-								.getLastAccessTimeLinkedListwrapSession());
+//						activeSessionLinedLinkedList.putOrMoveFirst(session
+//								.getLastAccessTimeLinkedListwrapSession());
 					}
 				}
 				ReadInterest readInterest = null;
@@ -285,9 +285,9 @@ public class NioSocketProcessor {
 										SelectionKey.OP_READ);
 								key.attach(session);
 
-								activeSessionLinedLinkedList
-										.putOrMoveFirst(session
-												.getLastAccessTimeLinkedListwrapSession());
+//								activeSessionLinedLinkedList
+//										.putOrMoveFirst(session
+//												.getLastAccessTimeLinkedListwrapSession());
 							} catch (ClosedChannelException e) {
 								activeSessionLinedLinkedList
 										.remove(session
@@ -298,8 +298,8 @@ public class NioSocketProcessor {
 						}
 					} else {
 						interestRead(key, readInterest.isInterest, session);
-						activeSessionLinedLinkedList.putOrMoveFirst(session
-								.getLastAccessTimeLinkedListwrapSession());
+//						activeSessionLinedLinkedList.putOrMoveFirst(session
+//								.getLastAccessTimeLinkedListwrapSession());
 					}
 				}
 				// 检查reRegisterQueueWrite是否有已经可以激活的发送session如果有则注册写事件
@@ -328,8 +328,8 @@ public class NioSocketProcessor {
 							.iterator();
 					while (iter.hasNext()) {
 						SelectionKey key = iter.next();
-						iter.remove();
 						session = (IoSession) key.attachment();
+						iter.remove();
 						activeSessionLinedLinkedList.putOrMoveFirst(session
 								.getLastAccessTimeLinkedListwrapSession());
 						try {
@@ -458,16 +458,17 @@ public class NioSocketProcessor {
 										// 若果当尝试了trySendNum次后发送依然为0,则当前网络压力大或是客户端网络不良造成发送数据堆积
 										// 服务器，此時當前session将进入到等待队列，等候一段时间后重新注册写事件
 										try {
-											isClearWrite = true;
+											
 											if (!session.isRegisterReWrite) {
-												session.isRegisterReWrite = true;
 												reRegisterQueueWrite
 														.push(session);
+												session.isRegisterReWrite = true;
 												activeSessionLinedLinkedList
 														.remove(session
 																.getLastAccessTimeLinkedListwrapSession());
 												checkReRegisterWrite.needRun();
 											}
+											isClearWrite = true;
 										} catch (Exception e) {
 										}
 
@@ -495,7 +496,8 @@ public class NioSocketProcessor {
 					}
 				}
 				Entity<IoSession> entity;
-				while ((entity = activeSessionLinedLinkedList.getLast()) != null) {
+				while ((entity = activeSessionLinedLinkedList.
+						getLast()) != null) {
 					if (now - entity.getElement().getLastActiveTime() < nscfg
 							.getClearTimeoutSessionInterval()) {
 						break;

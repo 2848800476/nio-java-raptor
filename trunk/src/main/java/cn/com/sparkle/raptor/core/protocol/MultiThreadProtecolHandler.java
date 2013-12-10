@@ -36,7 +36,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 	private final static Logger logger = Logger
 			.getLogger(MultiThreadProtecolHandler.class);
 
-	private final static int MAX_EVENT_QUEUE_SIZE = 1000;
+	private final static int MAX_EVENT_QUEUE_SIZE = 200;
 	private final static int CONTINUE_READ_THRESHOLD = (int)(MAX_EVENT_QUEUE_SIZE * 0.6);
 
 	private SyncBuffPool buffPool;
@@ -164,8 +164,12 @@ public class MultiThreadProtecolHandler implements IoHandler {
 																			// a
 																			// instance
 																			// of
-																			// ProtecolHandlerAttachment
-			jobDo.doJob(session);
+			try{															// ProtecolHandlerAttachment
+				jobDo.doJob(session);
+			}catch(Throwable e){
+				session.closeSocketChannel();
+				logger.error("", e);
+			}
 			return;
 		}
 		ProtocolHandlerIoSession attachment = (ProtocolHandlerIoSession) session
@@ -314,8 +318,9 @@ public class MultiThreadProtecolHandler implements IoHandler {
 								attachment.unFinishedList.removeFirst();
 							}
 						
-					} catch (IOException e) {
+					} catch (Exception e) {
 						logger.error("fatal error", e);
+						session.closeSocketChannel();
 					}
 				}
 			};
@@ -352,7 +357,12 @@ public class MultiThreadProtecolHandler implements IoHandler {
 			ProtocolHandlerIoSession mySession = (ProtocolHandlerIoSession) session
 					.attachment();
 			while (true) {
-				jobDo.doJob(session);
+				try{
+					jobDo.doJob(session);
+				}catch(Throwable e){
+					session.closeSocketChannel();
+					logger.error("", e);
+				}
 				// spin to lock
 				mySession.wantLock2 = 1;
 				mySession.turn = 2;

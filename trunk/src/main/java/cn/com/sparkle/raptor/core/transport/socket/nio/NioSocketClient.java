@@ -3,6 +3,8 @@ package cn.com.sparkle.raptor.core.transport.socket.nio;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -13,9 +15,12 @@ public class NioSocketClient {
 	private NioSocketConnector connector;
 	private Lock lock = new ReentrantLock();
 
-	public NioSocketClient(NioSocketConfigure nscfg) throws IOException {
+	public NioSocketClient(NioSocketConfigure nscfg,String name) throws IOException {
 		this.nscfg = nscfg;
-		connector = new NioSocketConnector(nscfg);
+		connector = new NioSocketConnector(nscfg,name);
+	}
+	public NioSocketClient(NioSocketConfigure nscfg) throws IOException{
+		this(nscfg,"defaultClient");
 	}
 
 	private SocketChannel getSocketChannel() throws IOException {
@@ -25,37 +30,25 @@ public class NioSocketClient {
 		return sc;
 	}
 
-	public void connect(InetSocketAddress address, IoHandler handler)
+	public Future<Boolean> connect(InetSocketAddress address, IoHandler handler)
 			throws Exception {
-		if (handler == null)
-			throw new IOException("handler is not exist");
-		SocketChannel sc = getSocketChannel();
-		sc.connect(address);
-		try {
-			lock.lock();
-//			sc = getSocketChannel();
-			connector.registerConnector(sc, handler);
-
-		} finally {
-			lock.unlock();
-		}
+		return connect(address, handler, null);
 		
 	}
 
-	public void connect(InetSocketAddress address, IoHandler handler,
+	public Future<Boolean> connect(InetSocketAddress address, IoHandler handler,
 			Object attachment) throws Exception {
+		
 		if (handler == null)
 			throw new IOException("handler is not exist");
 		SocketChannel sc = getSocketChannel();
 		sc.connect(address);
 		try {
 			lock.lock();
-//			sc = getSocketChannel();
-			connector.registerConnector(sc, handler, attachment);
+			return 	connector.registerConnector(sc, handler, attachment);
 
 		} finally {
 			lock.unlock();
 		}
-		
 	}
 }
