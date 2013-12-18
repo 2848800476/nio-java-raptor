@@ -308,6 +308,7 @@ public class IoSession {
 		try {
 			channel.close();
 			channel.socket().close();
+//			closeSession();
 		} catch (IOException e) {
 		}
 	}
