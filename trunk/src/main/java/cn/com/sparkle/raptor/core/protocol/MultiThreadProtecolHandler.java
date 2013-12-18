@@ -167,7 +167,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 			try{															// ProtecolHandlerAttachment
 				jobDo.doJob(session);
 			}catch(Throwable e){
-				session.closeSocketChannel();
+				session.closeSession();
 				logger.error("", e);
 			}
 			return;
@@ -320,7 +320,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 						
 					} catch (Exception e) {
 						logger.error("fatal error", e);
-						session.closeSocketChannel();
+						session.closeSession();
 					}
 				}
 			};
@@ -360,7 +360,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 				try{
 					jobDo.doJob(session);
 				}catch(Throwable e){
-					session.closeSocketChannel();
+					session.closeSession();
 					logger.error("", e);
 				}
 				// spin to lock
@@ -626,10 +626,9 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		}
 
 		@Override
-		public void closeSocketChannel() {
-			session.closeSocketChannel();
+		public void closeSession() {
+			session.closeSession();
 		}
-
 		@Override
 		public Entity<IoSession> getLastAccessTimeLinkedListwrapSession() {
 			return session.getLastAccessTimeLinkedListwrapSession();

@@ -172,7 +172,7 @@ public class IoSession {
 			try {
 				channel.write(buffer);
 			} catch (IOException e) {
-				this.closeSocketChannel();
+				this.closeSession();
 				throw new SessionHavaClosedException("IoSession have closed!");
 			}
 //			if(!buffer.hasRemaining()){
@@ -296,20 +296,20 @@ public class IoSession {
 		return attachment;
 	}
 
-	void closeSession() {
-		if (!isClose) {
-			isClose = true;
-			closeSocketChannel();
-			handler.onSessionClose(this);
-		}
-	}
-
-	public void closeSocketChannel() {
-		try {
-			channel.close();
-			channel.socket().close();
-//			closeSession();
-		} catch (IOException e) {
+	public void closeSession() {
+		if(!isClose){
+			if(Thread.currentThread() == processor.getThread()){
+					isClose = true;
+					try {
+						channel.close();
+						channel.socket().close();
+					} catch (IOException e) {
+					}
+					handler.onSessionClose(this);
+			}else{
+				//register close request
+				processor.registerClose(this);
+			}
 		}
 	}
 	public String getRemoteAddress(){

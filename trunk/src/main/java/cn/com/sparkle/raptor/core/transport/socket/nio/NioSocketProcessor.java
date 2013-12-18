@@ -36,8 +36,11 @@ public class NioSocketProcessor {
 	private Selector selector;
 	private ReentrantLock lock = new ReentrantLock();
 	private ReentrantLock readLock = new ReentrantLock();
+	private ReentrantLock closeLock = new ReentrantLock();
 
 	private Queue<IoSession> registerQueueWrite = new MaximumSizeArrayCycleQueue<IoSession>(
+			IoSession.class, 1000);
+	private Queue<IoSession> registerQueueClose = new MaximumSizeArrayCycleQueue<IoSession>(
 			IoSession.class, 1000);
 	private Queue<ReadInterest> registerQueueRead = new MaximumSizeArrayCycleQueue<ReadInterest>(
 			ReadInterest.class, 1000);
@@ -56,7 +59,7 @@ public class NioSocketProcessor {
 		}
 
 	}
-
+	private Thread thread;
 	// private RecieveMessageDealer recieveMessageDealer;
 
 	private LastAccessTimeLinkedList<IoSession> activeSessionLinedLinkedList = new LastAccessTimeLinkedList<IoSession>();
@@ -86,10 +89,10 @@ public class NioSocketProcessor {
 		// recieveMessageDealer.setDaemon(true);
 		// recieveMessageDealer.start();
 
-		Thread t = new Thread(new Processor());
-		t.setDaemon(true);
-		t.setName("Raptor-Nio-Processor " + name );
-		t.start();
+		thread = new Thread(new Processor());
+		thread.setDaemon(true);
+		thread.setName("Raptor-Nio-Processor " + name );
+		thread.start();
 		checkRegisterRead = new DelayChecked(nscfg.getRegisterReadDelay()) {
 			@Override
 			public void goToRun() {
@@ -156,7 +159,7 @@ public class NioSocketProcessor {
 					break;
 				} catch (Exception e) {
 					try {
-						Thread.sleep(10);
+						Thread.sleep(1);
 					} catch (InterruptedException e1) {
 					}
 				}
@@ -177,13 +180,33 @@ public class NioSocketProcessor {
 				} catch (Exception e) {
 					logger.debug(e);
 					try {
-						Thread.sleep(10);
+						Thread.sleep(1);
 					} catch (InterruptedException e1) {
 					}
 				}
 			}
 		} finally {
 			lock.unlock();
+		}
+	}
+	public void registerClose(IoSession session) {
+		try {
+			closeLock.lock();
+			while (true) {
+				try {
+					registerQueueClose.push(session);
+					selector.wakeup();
+					break;
+				} catch (Exception e) {
+					logger.debug(e);
+					try {
+						Thread.sleep(1);
+					} catch (InterruptedException e1) {
+					}
+				}
+			}
+		} finally {
+			closeLock.unlock();
 		}
 	}
 
@@ -228,6 +251,10 @@ public class NioSocketProcessor {
 				return false;
 		}
 	}
+	
+	public Thread getThread() {
+		return thread;
+	}
 
 	class Processor implements Runnable {
 		public void run() {
@@ -240,6 +267,11 @@ public class NioSocketProcessor {
 					i = selector.select(1);
 				} catch (Throwable e) {
 					throw new RuntimeException(e);
+				}
+				
+				while((session = (IoSession)registerQueueClose.peek()) != null ){
+					registerQueueClose.poll();
+					session.closeSession();
 				}
 				while ((session = (IoSession) registerQueueWrite.peek()) != null) {
 					registerQueueWrite.poll();
@@ -489,6 +521,7 @@ public class NioSocketProcessor {
 							}
 						} catch (Exception e) {
 							session.getHandler().catchException(session, e);
+							key.cancel();
 							session.closeSession();
 							activeSessionLinedLinkedList.remove(session
 									.getLastAccessTimeLinkedListwrapSession());
