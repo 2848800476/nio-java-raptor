@@ -212,14 +212,17 @@ public class NioSocketProcessor {
 
 	private boolean changeInterestWrite(SelectionKey key, boolean isInterest,
 			IoSession session) {
-		// logger.debug(session.getRemoteAddress() + " interest write:" +
-		// isInterest);
+//		 logger.debug( "interest write:" +
+//		 isInterest + " " + session.getRemoteAddress());
 		int i = key.interestOps();
 		if (isInterest) {
 			if ((i & SelectionKey.OP_WRITE) == 0) {
 				key.interestOps(i | SelectionKey.OP_WRITE);
 				return true;
 			} else
+//				logger.debug( "repeat interest write:" +
+//						 isInterest + " " + session.getRemoteAddress() + "  " + session.getDebugQueue().size());
+				
 				return false;
 		} else {
 
@@ -234,8 +237,8 @@ public class NioSocketProcessor {
 	private boolean interestRead(SelectionKey key, boolean isInterest,
 			IoSession session) {
 		int i = key.interestOps();
-		// logger.debug( "local:" + session.getLocalAddress() + "  remote:" +
-		// session.getRemoteAddress() + " interest read:" + isInterest);
+//		 logger.debug( "local:" + session.getLocalAddress() + "  remote:" +
+//		 session.getRemoteAddress() + " interest read:" + isInterest);
 		if (isInterest) {
 			if ((i & SelectionKey.OP_READ) == 0) {
 				key.interestOps(i | SelectionKey.OP_READ);
@@ -264,6 +267,7 @@ public class NioSocketProcessor {
 			while (true) {
 				int i;
 				try {
+					
 					i = selector.select(1);
 				} catch (Throwable e) {
 					throw new RuntimeException(e);
@@ -473,7 +477,7 @@ public class NioSocketProcessor {
 														.onMessageSent(session,
 																buffer);
 											} else {
-												isClearWrite = true;
+//												isClearWrite = true;
 												break;
 											}
 											sendSize = 1;// avoid session be
@@ -485,7 +489,7 @@ public class NioSocketProcessor {
 									}
 									if (session.peekWaitSendBulk() == null) {
 										isClearWrite = true;
-									} else if (sendSize == 0) {
+									}else if (sendSize == 0) {
 										// logger.debug("delay send ,and unregister writer");
 										// 若果当尝试了trySendNum次后发送依然为0,则当前网络压力大或是客户端网络不良造成发送数据堆积
 										// 服务器，此時當前session将进入到等待队列，等候一段时间后重新注册写事件
@@ -501,6 +505,7 @@ public class NioSocketProcessor {
 												checkReRegisterWrite.needRun();
 											}
 											isClearWrite = true;
+//											logger.debug("wait to send");
 										} catch (Exception e) {
 										}
 

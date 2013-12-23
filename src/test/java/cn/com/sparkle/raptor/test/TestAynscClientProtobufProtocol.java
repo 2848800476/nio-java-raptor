@@ -45,15 +45,15 @@ public class TestAynscClientProtobufProtocol {
 		
 		TestAynscClientProtobufProtocolHandler ih = new TestAynscClientProtobufProtocolHandler();
 		IoHandler handler = new MultiThreadProtecolHandler(5000, 16 * 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, ih);
-		for(int i = 0 ; i < 99999999 ; i++){
+		for(int i = 0 ; i < 1 ; i++){
 //		while(true){
 			WaitFinishConnect wfc = new WaitFinishConnect();
 //			client.connect(new InetSocketAddress("10.10.83.243",1234), handler,"aaa" + i);
 //			client.connect(new InetSocketAddress("192.168.3.100",1234),handler,"aaa" + i );
 			
 //			client.connect(new InetSocketAddress("10.238.130.23",1234),handler, wfc);
-			client.connect(new InetSocketAddress("127.0.0.1",1234),handler, wfc).get();
-//			client.connect(new InetSocketAddress("10.232.35.11",1234), handler,wfc);
+//			client.connect(new InetSocketAddress("127.0.0.1",1234),handler, wfc).get();
+			client.connect(new InetSocketAddress("10.232.35.11",1234), handler,wfc);
 //			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );
 //			wfc.count.await();
 //			Person.Builder builder = Person.newBuilder().setId(1).setName(ih.soure);
@@ -75,7 +75,7 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 	public String soure = "";
 	
 	public TestAynscClientProtobufProtocolHandler(){
-		for(int i = 0 ; i < 9 ; i++){
+		for(int i = 0 ; i < 2 ; i++){
 			soure += origin;
 		}
 	}
@@ -113,8 +113,8 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 			public void run(){
 				int i = 0;
 				long now = System.currentTimeMillis();
-				for(int j = 0 ; j<1 ; ++j){
-//				while(true){
+//				for(int j = 0 ; j<1 ; ++j){
+				while(true){
 					try {
 						Person.Builder builder = Person.newBuilder().setId(++i).setName(soure);
 //						AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
@@ -177,7 +177,7 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 		}finally{
 			lock.unlock();
 		}
-		session.closeSession();
+//		session.closeSession();
 	}
 	@Override
 	public void onOneThreadCatchException(IoSession ioSession,
