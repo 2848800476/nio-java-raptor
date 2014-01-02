@@ -12,4 +12,5 @@ public interface BuffPool {
 	public static class PoolEmptyException extends IOException{
 		private static final long serialVersionUID = 3029731281015223053L;
 	}
+	public int size();
 }

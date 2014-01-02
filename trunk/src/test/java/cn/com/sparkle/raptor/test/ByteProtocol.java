@@ -14,6 +14,7 @@ public class ByteProtocol implements Protocol {
 	private byte[] message;
 
 	public ByteProtocol(int byteSize) {
+		System.out.println("bytesize:" + byteSize);
 		this.byteSize = byteSize;
 		message = new byte[byteSize];
 	}

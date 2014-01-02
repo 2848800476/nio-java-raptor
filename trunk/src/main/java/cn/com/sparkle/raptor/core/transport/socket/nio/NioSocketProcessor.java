@@ -47,6 +47,8 @@ public class NioSocketProcessor {
 	private Queue<IoSession> reRegisterQueueWrite = new MaximumSizeArrayCycleQueue<IoSession>(
 			IoSession.class, 10000);
 	private CycleAllocateBytesBuffPool memPool;
+	
+	private long lastWarnMemLack = TimeUtil.currentTimeMillis();
 
 	private final static class ReadInterest {
 		private IoSession session;
@@ -376,22 +378,34 @@ public class NioSocketProcessor {
 									SocketChannel sc = (SocketChannel) key
 											.channel();
 									session = (IoSession) key.attachment();
-									for (int k = 0; k < 10; ++k) {
+									for (int k = 0; k < 255; ++k) {
 										if (buff == null) {
 											for (int j = 0; j < 3; j++) {
 												if ((buff = memPool.tryGet()) != null) {
 													break;
+												}else if(TimeUtil.currentTimeMillis() - lastWarnMemLack >2000){
+													lastWarnMemLack = TimeUtil.currentTimeMillis();
+													buff = new AllocateBytesBuff(
+															memPool.getCellCapacity() * 2 / 3,
+															false);
+													logger.warn("Recieve mem pool is empty!Creat a heap buff!May be you need to increase size of the pool!");
 												}
-												try {
-													Thread.sleep(1);
-												} catch (InterruptedException e) {
-												}
+//												else if(++memLackCount == 10000){
+//														memLackCount = 0;
+//														buff = new AllocateBytesBuff(
+//																memPool.getCellCapacity() * 2 / 3,
+//																false);
+//														logger.warn("Recieve mem pool is empty!Creat a buff!May be you need to increase size of the pool!");
+//												}
 											}
-											if (buff == null) {
-												buff = new AllocateBytesBuff(
-														memPool.getCellCapacity() * 2 / 3,
-														false);
-												logger.warn("Recieve mem pool is empty!Creat a buff!May be you need to increase size of the pool!");
+//											if (buff == null) {
+//												buff = new AllocateBytesBuff(
+//														memPool.getCellCapacity() * 2 / 3,
+//														false);
+//												logger.warn("Recieve mem pool is empty!Creat a buff!May be you need to increase size of the pool!");
+//											}
+											if(buff == null){
+												break;
 											}
 										}
 										readSize = sc
@@ -401,6 +415,7 @@ public class NioSocketProcessor {
 										}
 										if (!buff.getByteBuffer()
 												.hasRemaining()) {
+//											System.out.println(buff.getByteBuffer().position());
 											buff.getByteBuffer()
 													.limit(buff.getByteBuffer()
 															.position())
@@ -411,8 +426,10 @@ public class NioSocketProcessor {
 											buff = null;
 										}
 									}
+									
 									if (buff != null
 											&& buff.getByteBuffer().position() != 0) {
+//										System.out.println(buff.getByteBuffer().position());
 										buff.getByteBuffer()
 												.limit(buff.getByteBuffer()
 														.position())

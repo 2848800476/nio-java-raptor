@@ -30,16 +30,18 @@ public class TestServerProtobufProtocol {
 		// TODO Auto-generated method stub
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		nsc.setProcessorNum(2);
-		nsc.setCycleRecieveBuffCellSize(10000);
+		nsc.setCycleRecieveBuffCellSize(1000);
 		nsc.setTcpNoDelay(true);
 		nsc.setReuseAddress(true);
 //		nsc.setRecieveBuffSize(32* 1024);
 //		nsc.setSentBuffSize( 8 * 1024);
 		//nsc.setRevieveBuffSize(1024 * 2048);
 		//nsc.setTcpNoDelay(true);
-		ProtoBufProtocol protocol = new ProtoBufProtocol();
-		protocol.registerMessage(1, PersonMessage.AddressBook.getDefaultInstance());
-		protocol.registerMessage(2, PersonMessage.Person.getDefaultInstance());
+		
+		ProtoBufProtocol protocol = new ProtoBufProtocol(PersonMessage.Person.getDefaultInstance());
+		
+//		ProtoBufProtocol protocol = new ProtoBufProtocol();
+//		protocol.registerMessage(1, PersonMessage.Person.getDefaultInstance());
 		NioSocketServer server = new NioSocketServer(nsc);
 		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(5000,16 * 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, new ProtobufProtocolHandler()));
 //		server.bind(new InetSocketAddress(12345),new FilterChain(new TestHandler()));
@@ -51,7 +53,7 @@ class ProtobufProtocolHandler implements ProtocolHandler{
 	private String soure = "";
 	public String origin = "ÄãºÃ£¡Mr server !This is client  cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc             !write package";
 	public ProtobufProtocolHandler(){
-		for(int i = 0 ; i < 9 ; i++){
+		for(int i = 0 ; i < 1 ; i++){
 			soure += origin;
 		}
 		Person.Builder builder = Person.newBuilder().setId(2).setName(soure);
@@ -69,6 +71,12 @@ class ProtobufProtocolHandler implements ProtocolHandler{
 			Person.Builder builder = Person.newBuilder().setId(p.getId()).setName(soure);
 //			AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
 			session.writeObject( builder.build() );
+//			try {
+//				Thread.sleep(1);
+//			} catch (InterruptedException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 //			session.writeObject("ÄãºÃ£¡");
 		} catch (SessionHavaClosedException e) {
 		}
