@@ -31,7 +31,6 @@ public class BufferPoolOutputStream extends OutputStream {
 	private void clearBuff() {
 		for (IoBuffer buffer : arrayList) {
 			if (buffer != ioBuffer) {
-				System.out.println("close");
 				((CycleBuff) buffer).close();
 			}
 		}

@@ -26,6 +26,7 @@ public class TestAynscClientByteProtocol {
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		nsc.setTcpNoDelay(true);
 		nsc.setProcessorNum(2);
+		nsc.setSoLinger(5);
 		nsc.setCycleRecieveBuffCellSize(1000);
 //		nsc.setRecieveBuffSize(8 * 1024);
 		NioSocketClient client = new NioSocketClient(nsc);
@@ -33,7 +34,8 @@ public class TestAynscClientByteProtocol {
 		for(int i = 0 ; i < 1; i++){
 //			client.connect(new InetSocketAddress("10.10.83.243",1234), handler,"aaa" + i);
 //			client.connect(new InetSocketAddress("192.168.3.100",1234),handler,"aaa" + i );
-			client.connect(new InetSocketAddress("127.0.0.1",1234),handler,"aaa" + i );
+//			client.connect(new InetSocketAddress("127.0.0.1",1234),handler,"aaa" + i );
+			client.connect(new InetSocketAddress("10.232.35.11",1234), handler,"aaa" + i );
 //			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );
 			
 		}
@@ -134,7 +136,7 @@ class TestAsyncByteObjetClientHandler implements ProtocolHandler{
 			lock.lock();
 			++cc;
 			++tc;
-			if(cc%100000 == 0){
+			if(cc%10000 == 0){
 				long tt = System.currentTimeMillis() - ct;
 				System.out.println((cc*1000/tt) + "/s   " + (tc * 1000/(System.currentTimeMillis() - start) ) + "/s");
 				ct = System.currentTimeMillis();

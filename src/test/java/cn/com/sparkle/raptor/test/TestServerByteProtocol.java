@@ -24,7 +24,7 @@ public class TestServerByteProtocol {
 	public static void main(String[] args) throws IOException, QueueFullException {
 		// TODO Auto-generated method stub
 		NioSocketConfigure nsc = new NioSocketConfigure();
-		nsc.setProcessorNum(1);
+		nsc.setProcessorNum(4);
 		nsc.setCycleRecieveBuffCellSize(10000);
 		nsc.setTcpNoDelay(true);
 //		nsc.setRecieveBuffSize(32* 1024);
@@ -32,7 +32,7 @@ public class TestServerByteProtocol {
 		//nsc.setRevieveBuffSize(1024 * 2048);
 		//nsc.setTcpNoDelay(true);
 		NioSocketServer server = new NioSocketServer(nsc);
-		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(5000, 16 * 1024, 20, 300, 60, TimeUnit.SECONDS,new ByteProtocol(1024), new TestByteProtocolHandler()));
+		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(5000, 16 * 1024, 20, 300, 60, TimeUnit.SECONDS,new ByteProtocol(256), new TestByteProtocolHandler()));
 //		server.bind(new InetSocketAddress(12345),new FilterChain(new TestHandler()));
 	}
 	

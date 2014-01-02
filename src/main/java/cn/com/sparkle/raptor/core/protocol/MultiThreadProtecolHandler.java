@@ -18,6 +18,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 
 
+
 import org.apache.log4j.Logger;
 
 import cn.com.sparkle.raptor.core.buff.BuffPool;
@@ -36,13 +37,15 @@ public class MultiThreadProtecolHandler implements IoHandler {
 	private final static Logger logger = Logger
 			.getLogger(MultiThreadProtecolHandler.class);
 
-	private final static int MAX_EVENT_QUEUE_SIZE = 200;
+	private final static int MAX_EVENT_QUEUE_SIZE = 10;
 	private final static int CONTINUE_READ_THRESHOLD = (int)(MAX_EVENT_QUEUE_SIZE * 0.6);
-
+	
+	
 	private SyncBuffPool buffPool;
 	private ThreadPoolExecutor threadPool;
 	private Protocol protocol;
 	private ProtocolHandler handler;
+	private static AtomicInteger poolEmptyCount = new AtomicInteger(0);
 
 	private Protocol nullProtocol = new Protocol() {
 		@Override
@@ -228,7 +231,9 @@ public class MultiThreadProtecolHandler implements IoHandler {
 			IoBuffer buffer;
 			while((buffer = session.peekIoBuffer()) != null){
 				if (buffer instanceof CycleBuff) {
-					((CycleBuff) buffer).close();
+					CycleBuff buff = (CycleBuff) buffer;
+//					((CycleBuff) buffer).close();
+					buff.close();
 				}
 				session.truePollWaitSendBuff();
 				
@@ -302,7 +307,8 @@ public class MultiThreadProtecolHandler implements IoHandler {
 								attachment.unFinishedList.addLast(message);
 							}else{
 								if(message instanceof CycleBuff){
-									((CycleBuff)message).close();
+									CycleBuff buff = (CycleBuff)message;
+									buff.close();
 								}
 							}
 							// clear finished IoBuffer
@@ -310,8 +316,8 @@ public class MultiThreadProtecolHandler implements IoHandler {
 									&& !attachment.unFinishedList.getFirst().getByteBuffer()
 											.hasRemaining()) {
 								if (attachment.unFinishedList.getFirst() instanceof CycleBuff) {
-									((CycleBuff) attachment.unFinishedList.getFirst()).close();
-		
+									CycleBuff buff = ((CycleBuff) attachment.unFinishedList.getFirst());
+									buff.close();
 								} else {
 									// logger.debug("close new create mem");
 								}
@@ -403,7 +409,6 @@ public class MultiThreadProtecolHandler implements IoHandler {
 //			logger.debug( "finish event" + session.getRemoteAddress() + " mySession.job size:" + mySession.getJob().size() + " read state:" + mySession.isSuspendRead() + " runCount:" + runCount);
 		}
 	}
-
 	public static class ProtocolHandlerIoSession extends IoSession {
 
 		private LinkedList<Do<Object>> jobQueue = new LinkedList<Do<Object>>();
@@ -538,19 +543,25 @@ public class MultiThreadProtecolHandler implements IoHandler {
 
 						buff = session.getLastWaitSendBuffer();
 						IoBuffer[] buffs = null;
-						try{
 							if (buff != null) {
 								pos = buff.getByteBuffer().position();
 							}
-							buffs = protocol.encode(buffPool, obj, buff);
+							try{
+								buffs = protocol.encode(buffPool, obj, buff);
+							}catch(PoolEmptyException e){
+								if (buff != null) {
+									buff.getByteBuffer().position(pos);
+								}
+								throw e;
+							}finally{
+								if( buff!= null){
+									session.flushLastWaitSendBuffer(buff);
+								}
+							}
 							if (buff != null) {
 								totalSize = buff.getByteBuffer().position() - pos;
 							}
-						}finally{
-							if( buff!= null){
-								session.flushLastWaitSendBuffer(buff);
-							}
-						}
+				
 						
 						for (int i = 0; i < buffs.length; ++i) {
 							try {
@@ -566,21 +577,21 @@ public class MultiThreadProtecolHandler implements IoHandler {
 							}
 						}
 						return totalSize;
-					} catch (IOException e) {
-						logger.debug("", e);
-						if (buff != null) {
-							buff.getByteBuffer().position(pos);
-						}
+					}catch (IOException e) {
 						throw e;
 					}finally {
 						writeLock.unlock();
 					}
 				} catch (PoolEmptyException e) {
-					logger.info("maybe you need to incread the size of pool!");
+					
+					int count = poolEmptyCount.incrementAndGet();
+					if(count == 10000){
+						poolEmptyCount.set(0);
+						logger.warn("maybe you need to incread the size of pool!");
+					}
 					try {
-						Thread.sleep(1);
+						Thread.sleep(10);
 					} catch (InterruptedException e1) {
-						e1.printStackTrace();
 					}
 				} catch (IOException e) {
 					logger.error("fatal error", e);

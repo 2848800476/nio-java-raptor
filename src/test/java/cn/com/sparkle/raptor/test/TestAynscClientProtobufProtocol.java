@@ -27,7 +27,7 @@ import cn.com.sparkle.raptor.test.model.protocolbuffer.PersonMessage.AddressBook
 import cn.com.sparkle.raptor.test.model.protocolbuffer.PersonMessage.Person;
 
 public class TestAynscClientProtobufProtocol {
-	private final static Logger logger = Logger.getLogger(TestAynscClientProtobufProtocol.class);
+	public final static Logger logger = Logger.getLogger(TestAynscClientProtobufProtocol.class);
 	
 	public static void main(String[] args) throws Exception {
 		logger.debug("start");
@@ -35,16 +35,16 @@ public class TestAynscClientProtobufProtocol {
 		nsc.setTcpNoDelay(true);
 		nsc.setProcessorNum(1);
 		nsc.setCycleRecieveBuffCellSize(10000);
+		nsc.setSoTimeOut(10);
 //		nsc.setReuseAddress(true);
 		
 		NioSocketClient client = new NioSocketClient(nsc);
-		
-		ProtoBufProtocol protocol = new ProtoBufProtocol();
-		protocol.registerMessage(1, PersonMessage.AddressBook.getDefaultInstance());
-		protocol.registerMessage(2, PersonMessage.Person.getDefaultInstance());
+		ProtoBufProtocol protocol = new ProtoBufProtocol(PersonMessage.Person.getDefaultInstance());
+//		ProtoBufProtocol protocol = new ProtoBufProtocol();
+//		protocol.registerMessage(1, PersonMessage.Person.getDefaultInstance());
 		
 		TestAynscClientProtobufProtocolHandler ih = new TestAynscClientProtobufProtocolHandler();
-		IoHandler handler = new MultiThreadProtecolHandler(5000, 16 * 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, ih);
+		IoHandler handler = new MultiThreadProtecolHandler(1000, 16 * 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, ih);
 		for(int i = 0 ; i < 1 ; i++){
 //		while(true){
 			WaitFinishConnect wfc = new WaitFinishConnect();
@@ -52,8 +52,9 @@ public class TestAynscClientProtobufProtocol {
 //			client.connect(new InetSocketAddress("192.168.3.100",1234),handler,"aaa" + i );
 			
 //			client.connect(new InetSocketAddress("10.238.130.23",1234),handler, wfc);
-//			client.connect(new InetSocketAddress("127.0.0.1",1234),handler, wfc).get();
-			client.connect(new InetSocketAddress("10.232.35.11",1234), handler,wfc);
+			client.connect(new InetSocketAddress("127.0.0.1",1234),handler, wfc).get();
+//			client.connect(new InetSocketAddress("10.232.133.72", 10011), handler);
+//			client.connect(new InetSocketAddress("10.232.35.11",1234), handler,wfc);	
 //			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );
 //			wfc.count.await();
 //			Person.Builder builder = Person.newBuilder().setId(1).setName(ih.soure);
@@ -105,8 +106,8 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 		wfc.session = session;
 		wfc.count.countDown();
 		Person.Builder builder = Person.newBuilder().setId(0).setName(soure);
-		AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
-		System.out.println("size" + ab.build().getSerializedSize());
+//		AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
+		System.out.println("size" + builder.build().getSerializedSize());
 		
 		for(int i = 0 ; i < 1; i++){
 		Thread t = new Thread(){
@@ -182,7 +183,7 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 	@Override
 	public void onOneThreadCatchException(IoSession ioSession,
 			ProtocolHandlerIoSession attachment, Throwable e) {
-//		e.printStackTrace();
+		TestAynscClientProtobufProtocol.logger.error("", e);
 	}
 	@Override
 	public void onOneThreadMessageSent(ProtocolHandlerIoSession session,int sendSize) {
