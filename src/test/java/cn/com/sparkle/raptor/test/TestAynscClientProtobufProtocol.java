@@ -52,7 +52,8 @@ public class TestAynscClientProtobufProtocol {
 //			client.connect(new InetSocketAddress("192.168.3.100",1234),handler,"aaa" + i );
 			
 //			client.connect(new InetSocketAddress("10.238.130.23",1234),handler, wfc);
-			client.connect(new InetSocketAddress("127.0.0.1",1234),handler, wfc).get();
+//			client.connect(new InetSocketAddress("127.0.0.1",1234),handler, wfc).get();
+			client.connect(new InetSocketAddress("10.32.80.85",1234),handler, wfc).get();
 //			client.connect(new InetSocketAddress("10.232.133.72", 10011), handler);
 //			client.connect(new InetSocketAddress("10.232.35.11",1234), handler,wfc);	
 //			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );

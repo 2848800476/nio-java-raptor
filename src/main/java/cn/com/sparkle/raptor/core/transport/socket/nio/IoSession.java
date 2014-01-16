@@ -305,7 +305,11 @@ public class IoSession {
 						channel.socket().close();
 					} catch (IOException e) {
 					}
-					handler.onSessionClose(this);
+					try{
+						handler.onSessionClose(this);
+					}catch(Throwable e){
+						logger.error("", e);
+					}
 			}else{
 				//register close request
 				processor.registerClose(this);

@@ -47,7 +47,7 @@ public class NioSocketProcessor {
 	private Queue<IoSession> reRegisterQueueWrite = new MaximumSizeArrayCycleQueue<IoSession>(
 			IoSession.class, 10000);
 	private CycleAllocateBytesBuffPool memPool;
-	
+
 	private long lastWarnMemLack = TimeUtil.currentTimeMillis();
 
 	private final static class ReadInterest {
@@ -61,6 +61,7 @@ public class NioSocketProcessor {
 		}
 
 	}
+
 	private Thread thread;
 	// private RecieveMessageDealer recieveMessageDealer;
 
@@ -73,8 +74,8 @@ public class NioSocketProcessor {
 	private DelayChecked checkReRegisterWrite;
 	private DelayChecked checkTimeoutSession;
 
-	public NioSocketProcessor(NioSocketConfigure nscfg, SyncBuffPool memPool,String name)
-			throws IOException {
+	public NioSocketProcessor(NioSocketConfigure nscfg, SyncBuffPool memPool,
+			String name) throws IOException {
 
 		this.nscfg = nscfg;
 		selector = Selector.open();
@@ -93,7 +94,7 @@ public class NioSocketProcessor {
 
 		thread = new Thread(new Processor());
 		thread.setDaemon(true);
-		thread.setName("Raptor-Nio-Processor " + name );
+		thread.setName("Raptor-Nio-Processor " + name);
 		thread.start();
 		checkRegisterRead = new DelayChecked(nscfg.getRegisterReadDelay()) {
 			@Override
@@ -191,6 +192,7 @@ public class NioSocketProcessor {
 			lock.unlock();
 		}
 	}
+
 	public void registerClose(IoSession session) {
 		try {
 			closeLock.lock();
@@ -214,17 +216,18 @@ public class NioSocketProcessor {
 
 	private boolean changeInterestWrite(SelectionKey key, boolean isInterest,
 			IoSession session) {
-//		 logger.debug( "interest write:" +
-//		 isInterest + " " + session.getRemoteAddress());
+		// logger.debug( "interest write:" +
+		// isInterest + " " + session.getRemoteAddress());
 		int i = key.interestOps();
 		if (isInterest) {
 			if ((i & SelectionKey.OP_WRITE) == 0) {
 				key.interestOps(i | SelectionKey.OP_WRITE);
 				return true;
 			} else
-//				logger.debug( "repeat interest write:" +
-//						 isInterest + " " + session.getRemoteAddress() + "  " + session.getDebugQueue().size());
-				
+				// logger.debug( "repeat interest write:" +
+				// isInterest + " " + session.getRemoteAddress() + "  " +
+				// session.getDebugQueue().size());
+
 				return false;
 		} else {
 
@@ -236,11 +239,11 @@ public class NioSocketProcessor {
 		}
 	}
 
-	private boolean interestRead(SelectionKey key, boolean isInterest,
+	private boolean changeInterestRead(SelectionKey key, boolean isInterest,
 			IoSession session) {
 		int i = key.interestOps();
-//		 logger.debug( "local:" + session.getLocalAddress() + "  remote:" +
-//		 session.getRemoteAddress() + " interest read:" + isInterest);
+		// logger.debug( "local:" + session.getLocalAddress() + "  remote:" +
+		// session.getRemoteAddress() + " interest read:" + isInterest);
 		if (isInterest) {
 			if ((i & SelectionKey.OP_READ) == 0) {
 				key.interestOps(i | SelectionKey.OP_READ);
@@ -256,7 +259,7 @@ public class NioSocketProcessor {
 				return false;
 		}
 	}
-	
+
 	public Thread getThread() {
 		return thread;
 	}
@@ -269,13 +272,13 @@ public class NioSocketProcessor {
 			while (true) {
 				int i;
 				try {
-					
+
 					i = selector.select(1);
 				} catch (Throwable e) {
 					throw new RuntimeException(e);
 				}
-				
-				while((session = (IoSession)registerQueueClose.peek()) != null ){
+
+				while ((session = (IoSession) registerQueueClose.peek()) != null) {
 					registerQueueClose.poll();
 					session.closeSession();
 				}
@@ -286,59 +289,53 @@ public class NioSocketProcessor {
 									// message have proceeded in last send
 									// process.
 					}
-					SelectionKey key = session.getChannel().keyFor(selector);
-					if (key == null) {
-						if (session.isClose()) {
-							continue;
-						}
-						try {
-
+					try {
+						SelectionKey key = session.getChannel()
+								.keyFor(selector);
+						if (key == null) {
+							if (session.isClose()) {
+								continue;
+							}
 							key = session.getChannel().register(selector,
 									SelectionKey.OP_WRITE);
 							key.attach(session);
-//							activeSessionLinedLinkedList.putOrMoveFirst(session
-//									.getLastAccessTimeLinkedListwrapSession());
-						} catch (ClosedChannelException e) {
-							activeSessionLinedLinkedList.remove(session
-									.getLastAccessTimeLinkedListwrapSession());
-							session.getHandler().catchException(session, e);
-							session.closeSession();
+						} else {
+							key.attach(session);
+							changeInterestWrite(key, true, session);
 						}
-					} else {
-						key.attach(session);
-						changeInterestWrite(key, true, session);
-//						activeSessionLinedLinkedList.putOrMoveFirst(session
-//								.getLastAccessTimeLinkedListwrapSession());
+					} catch (Throwable e) {
+						activeSessionLinedLinkedList.remove(session
+								.getLastAccessTimeLinkedListwrapSession());
+						session.getHandler().catchException(session, e);
+						session.closeSession();
 					}
+
 				}
 				ReadInterest readInterest = null;
 				while ((readInterest = (ReadInterest) registerQueueRead.peek()) != null) {
 					session = readInterest.session;
-					SelectionKey key = session.getChannel().keyFor(selector);
 					registerQueueRead.poll();
-					if (key == null) {
-						if (readInterest.isInterest) {
-							try {
+
+					try {
+						SelectionKey key = session.getChannel()
+								.keyFor(selector);
+						if (key == null) {
+							if (readInterest.isInterest) {
 								key = session.getChannel().register(selector,
 										SelectionKey.OP_READ);
 								key.attach(session);
-
-//								activeSessionLinedLinkedList
-//										.putOrMoveFirst(session
-//												.getLastAccessTimeLinkedListwrapSession());
-							} catch (ClosedChannelException e) {
-								activeSessionLinedLinkedList
-										.remove(session
-												.getLastAccessTimeLinkedListwrapSession());
-								session.getHandler().catchException(session, e);
-								session.closeSession();
 							}
+						} else {
+							changeInterestRead(key, readInterest.isInterest,
+									session);
 						}
-					} else {
-						interestRead(key, readInterest.isInterest, session);
-//						activeSessionLinedLinkedList.putOrMoveFirst(session
-//								.getLastAccessTimeLinkedListwrapSession());
+					} catch (Throwable e) {
+						activeSessionLinedLinkedList.remove(session
+								.getLastAccessTimeLinkedListwrapSession());
+						session.getHandler().catchException(session, e);
+						session.closeSession();
 					}
+
 				}
 				// 检查reRegisterQueueWrite是否有已经可以激活的发送session如果有则注册写事件
 				long now = TimeUtil.currentTimeMillis();
@@ -348,17 +345,25 @@ public class NioSocketProcessor {
 						checkReRegisterWrite.needRun();
 						break;
 					}
-					if (!session.isClose()) {
-						SelectionKey key = session.getChannel()
-								.keyFor(selector);
-						key.attach(session);
-						changeInterestWrite(key, true, session);
-						session.isRegisterReWrite = false;
-						// logger.debug("change to rewrite" +
-						// session.getLastActiveTime());
-						// activeSessionLinedLinkedList.putOrMoveFirst(session
-						// .getLastAccessTimeLinkedListwrapSession());
+					try {
+						if (!session.isClose()) {
+							SelectionKey key = session.getChannel()
+									.keyFor(selector);
+							key.attach(session);
+							changeInterestWrite(key, true, session);
+							session.isRegisterReWrite = false;
+							// logger.debug("change to rewrite" +
+							// session.getLastActiveTime());
+							// activeSessionLinedLinkedList.putOrMoveFirst(session
+							// .getLastAccessTimeLinkedListwrapSession());
+						}
+					} catch (Throwable e) {
+						activeSessionLinedLinkedList.remove(session
+								.getLastAccessTimeLinkedListwrapSession());
+						session.getHandler().catchException(session, e);
+						session.closeSession();
 					}
+					
 					reRegisterQueueWrite.poll();
 				}
 				if (i > 0) {
@@ -383,28 +388,34 @@ public class NioSocketProcessor {
 											for (int j = 0; j < 3; j++) {
 												if ((buff = memPool.tryGet()) != null) {
 													break;
-												}else if(TimeUtil.currentTimeMillis() - lastWarnMemLack >2000){
-													lastWarnMemLack = TimeUtil.currentTimeMillis();
+												} else if (TimeUtil
+														.currentTimeMillis()
+														- lastWarnMemLack > 2000) {
+													lastWarnMemLack = TimeUtil
+															.currentTimeMillis();
 													buff = new AllocateBytesBuff(
 															memPool.getCellCapacity() * 2 / 3,
 															false);
 													logger.warn("Recieve mem pool is empty!Creat a heap buff!May be you need to increase size of the pool!");
 												}
-//												else if(++memLackCount == 10000){
-//														memLackCount = 0;
-//														buff = new AllocateBytesBuff(
-//																memPool.getCellCapacity() * 2 / 3,
-//																false);
-//														logger.warn("Recieve mem pool is empty!Creat a buff!May be you need to increase size of the pool!");
-//												}
+												// else if(++memLackCount ==
+												// 10000){
+												// memLackCount = 0;
+												// buff = new AllocateBytesBuff(
+												// memPool.getCellCapacity() * 2
+												// / 3,
+												// false);
+												// logger.warn("Recieve mem pool is empty!Creat a buff!May be you need to increase size of the pool!");
+												// }
 											}
-//											if (buff == null) {
-//												buff = new AllocateBytesBuff(
-//														memPool.getCellCapacity() * 2 / 3,
-//														false);
-//												logger.warn("Recieve mem pool is empty!Creat a buff!May be you need to increase size of the pool!");
-//											}
-											if(buff == null){
+											// if (buff == null) {
+											// buff = new AllocateBytesBuff(
+											// memPool.getCellCapacity() * 2 /
+											// 3,
+											// false);
+											// logger.warn("Recieve mem pool is empty!Creat a buff!May be you need to increase size of the pool!");
+											// }
+											if (buff == null) {
 												break;
 											}
 										}
@@ -415,7 +426,7 @@ public class NioSocketProcessor {
 										}
 										if (!buff.getByteBuffer()
 												.hasRemaining()) {
-//											System.out.println(buff.getByteBuffer().position());
+											// System.out.println(buff.getByteBuffer().position());
 											buff.getByteBuffer()
 													.limit(buff.getByteBuffer()
 															.position())
@@ -426,10 +437,10 @@ public class NioSocketProcessor {
 											buff = null;
 										}
 									}
-									
+
 									if (buff != null
 											&& buff.getByteBuffer().position() != 0) {
-//										System.out.println(buff.getByteBuffer().position());
+										// System.out.println(buff.getByteBuffer().position());
 										buff.getByteBuffer()
 												.limit(buff.getByteBuffer()
 														.position())
@@ -494,7 +505,7 @@ public class NioSocketProcessor {
 														.onMessageSent(session,
 																buffer);
 											} else {
-//												isClearWrite = true;
+												// isClearWrite = true;
 												break;
 											}
 											sendSize = 1;// avoid session be
@@ -506,12 +517,12 @@ public class NioSocketProcessor {
 									}
 									if (session.peekWaitSendBulk() == null) {
 										isClearWrite = true;
-									}else if (sendSize == 0) {
+									} else if (sendSize == 0) {
 										// logger.debug("delay send ,and unregister writer");
 										// 若果当尝试了trySendNum次后发送依然为0,则当前网络压力大或是客户端网络不良造成发送数据堆积
 										// 服务器，此時當前session将进入到等待队列，等候一段时间后重新注册写事件
 										try {
-											
+
 											if (!session.isRegisterReWrite) {
 												reRegisterQueueWrite
 														.push(session);
@@ -522,7 +533,7 @@ public class NioSocketProcessor {
 												checkReRegisterWrite.needRun();
 											}
 											isClearWrite = true;
-//											logger.debug("wait to send");
+											// logger.debug("wait to send");
 										} catch (Exception e) {
 										}
 
@@ -551,8 +562,7 @@ public class NioSocketProcessor {
 					}
 				}
 				Entity<IoSession> entity;
-				while ((entity = activeSessionLinedLinkedList.
-						getLast()) != null) {
+				while ((entity = activeSessionLinedLinkedList.getLast()) != null) {
 					if (now - entity.getElement().getLastActiveTime() < nscfg
 							.getClearTimeoutSessionInterval()) {
 						break;
