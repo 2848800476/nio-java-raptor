@@ -2,6 +2,7 @@ package cn.com.sparkle.raptor.core.protocol;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
@@ -11,6 +12,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+
+
 
 
 
@@ -32,12 +35,13 @@ import cn.com.sparkle.raptor.core.handler.IoHandler;
 import cn.com.sparkle.raptor.core.transport.socket.nio.IoSession;
 import cn.com.sparkle.raptor.core.transport.socket.nio.NioSocketProcessor;
 import cn.com.sparkle.raptor.core.transport.socket.nio.exception.SessionHavaClosedException;
+import cn.com.sparkle.raptor.core.util.TimeUtil;
 
 public class MultiThreadProtecolHandler implements IoHandler {
 	private final static Logger logger = Logger
 			.getLogger(MultiThreadProtecolHandler.class);
 
-	private final static int MAX_EVENT_QUEUE_SIZE = 10;
+	private final static int MAX_EVENT_QUEUE_SIZE = 100;
 	private final static int CONTINUE_READ_THRESHOLD = (int)(MAX_EVENT_QUEUE_SIZE * 0.6);
 	
 	
@@ -251,42 +255,6 @@ public class MultiThreadProtecolHandler implements IoHandler {
 	@Override
 	public void onMessageRecieved(IoSession session,final IoBuffer message)
 			throws IOException {
-		/*
-		ProtocolHandlerIoSession attachment = (ProtocolHandlerIoSession) session
-				.attachment();
-		Object obj = null;
-		while (message.getByteBuffer().hasRemaining()
-				&& (obj = protocol.decode(attachment, message)) != null) {
-			Do<Object> jobDo = new Do<Object>() {
-				@Override
-				public void doJob(IoSession session) {
-					handler.onOneThreadMessageRecieved(o,
-							(ProtocolHandlerIoSession) session.attachment());
-				}
-			};
-			jobDo.o = obj;
-			runOrWaitInQueue(jobDo, session);
-		}
-		if (message.getByteBuffer().hasRemaining()) {
-			attachment.unFinishedList.addLast(message);
-		}else{
-		if(message instanceof CycleBuff){
-								((CycleBuff)message).close();
-							}
-							}
-		// clear finished IoBuffer
-
-		while (attachment.unFinishedList.size() > 0
-				&& !attachment.unFinishedList.getFirst().getByteBuffer()
-						.hasRemaining()) {
-			if (attachment.unFinishedList.getFirst() instanceof CycleBuff) {
-				((CycleBuff) attachment.unFinishedList.getFirst()).close();
-
-			} else {
-				// logger.debug("close new create mem");
-			}
-			attachment.unFinishedList.removeFirst();
-		}*/
 		final ProtocolHandlerIoSession attachment = (ProtocolHandlerIoSession) session
 				.attachment();
 		attachment.recivePackageCount = (attachment.recivePackageCount + 1) % Integer.MAX_VALUE;
@@ -299,8 +267,13 @@ public class MultiThreadProtecolHandler implements IoHandler {
 						attachment.targetRecivePackageCount = recivePackageCount;
 								while (message.getByteBuffer().hasRemaining()
 										&& (obj = protocol.decode(attachment, message)) != null) {
+									try{
 									handler.onOneThreadMessageRecieved(obj,
 											attachment);
+									}catch(Throwable e){
+										logger.error("error", e);
+										session.closeSession();
+									}
 								}
 							
 							if (message.getByteBuffer().hasRemaining()) {
@@ -388,12 +361,11 @@ public class MultiThreadProtecolHandler implements IoHandler {
 						if (mySession.jobQueue.size() == CONTINUE_READ_THRESHOLD &&mySession.isSuspendRead()) {
 							session.continueRead();
 						}
-//						System.out.println(mySession.jobQueue.size());
 						try{
 							jobDo = mySession.jobQueue.removeFirst();
 						}catch(NoSuchElementException e){
-							System.out.println(mySession.jobQueue.isEmpty());
-							System.out.println(mySession.jobQueue.size());
+							System.err.println(mySession.jobQueue.isEmpty());
+							System.err.println(mySession.jobQueue.size());
 							throw e;
 						}
 						
@@ -406,7 +378,6 @@ public class MultiThreadProtecolHandler implements IoHandler {
 					mySession.wantLock2 = 0;
 				}
 			}
-//			logger.debug( "finish event" + session.getRemoteAddress() + " mySession.job size:" + mySession.getJob().size() + " read state:" + mySession.isSuspendRead() + " runCount:" + runCount);
 		}
 	}
 	public static class ProtocolHandlerIoSession extends IoSession {
@@ -415,7 +386,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		private volatile byte turn;
 		private byte wantLock1 = 0, wantLock2 = 0;
 		private volatile boolean isExecuting = false;
-		private LinkedList<IoBuffer> unFinishedList = new LinkedList<IoBuffer>();
+		private  final LinkedList<IoBuffer> unFinishedList = new LinkedList<IoBuffer>();
 		public Object protocolAttachment;
 		public Object customAttachment;
 		private volatile int recivePackageCount = 0;
@@ -427,12 +398,32 @@ public class MultiThreadProtecolHandler implements IoHandler {
 		private Protocol protocol;
 		private SyncBuffPool buffPool;
 
-		public ProtocolHandlerIoSession(IoSession session, Protocol protocol,
+		public ProtocolHandlerIoSession(final IoSession session, Protocol protocol,
 				SyncBuffPool buffPool) {
 			super(null, null, null);
 			this.session = session;
 			this.protocol = protocol;
 			this.buffPool = buffPool;
+			/*Thread t = new Thread(){
+				public void run(){
+					while(true){
+						try{
+						SelectionKey k = session.getChannel().keyFor(session.getProcessor().getSelector());
+						int i = k.interestOps();
+						boolean read = (i & SelectionKey.OP_READ) != 0;
+						boolean write = (i & SelectionKey.OP_WRITE) != 0;
+						logger.debug("read:" + read + " write:" + write + " waitwrite size:" + session.getDebugQueue().size() + " job queue size:" + jobQueue.size() + " last active time:" + session.getLastActiveTime());
+						}catch(Throwable e){
+							
+						}
+						try {
+							Thread.sleep(250);
+						} catch (InterruptedException e) {
+						}
+					}
+				}
+			};
+			t.start();*/
 		}
 		public LinkedList<Do<Object>> getJob(){
 			return jobQueue;
@@ -590,7 +581,7 @@ public class MultiThreadProtecolHandler implements IoHandler {
 						logger.warn("maybe you need to incread the size of pool!");
 					}
 					try {
-						Thread.sleep(10);
+						Thread.sleep(1);
 					} catch (InterruptedException e1) {
 					}
 				} catch (IOException e) {

@@ -1,9 +1,6 @@
 package cn.com.sparkle.raptor.core.protocol.protobuf;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -13,32 +10,16 @@ import com.google.protobuf.GeneratedMessage;
 import com.google.protobuf.Message.Builder;
 
 import cn.com.sparkle.raptor.core.buff.BuffPool;
-import cn.com.sparkle.raptor.core.buff.BuffPool.PoolEmptyException;
-import cn.com.sparkle.raptor.core.buff.CycleBuff;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
-import cn.com.sparkle.raptor.core.buff.IoBufferArray;
 import cn.com.sparkle.raptor.core.io.BufferPoolOutputStream;
 import cn.com.sparkle.raptor.core.io.IoBufferArrayInputStream;
 import cn.com.sparkle.raptor.core.protocol.DecodeException;
-import cn.com.sparkle.raptor.core.protocol.EncodeException;
 import cn.com.sparkle.raptor.core.protocol.MultiThreadProtecolHandler.ProtocolHandlerIoSession;
 import cn.com.sparkle.raptor.core.protocol.Protocol;
 
 public class ProtoBufProtocol implements Protocol {
 	private Logger logger = Logger.getLogger(ProtoBufProtocol.class);
 	private GeneratedMessage generatedMessage;
-//	private GeneratedMessage[] map = new GeneratedMessage[65536];
-//	private HashMap<Class, Integer> classMap = new HashMap<Class, Integer>();
-//	public void registerMessage(int id,GeneratedMessage message){
-//		if(id > 65535 || id < 0){
-//			throw new RuntimeException("id must be between [0,65535]!");
-//		}
-//		if(map[id] != null){
-//			throw new RuntimeException("repeated id of the message!");
-//		}
-//		map[id] = message;
-//		classMap.put(message.getClass(), id);
-//	}
 	
 	public ProtoBufProtocol(GeneratedMessage generatedMessage){
 		this.generatedMessage = generatedMessage;
@@ -56,37 +37,6 @@ public class ProtoBufProtocol implements Protocol {
 		private LinkedList<IoBuffer> buff = new LinkedList<IoBuffer>();
 	}
 
-//	byte tmp = readRawByte();
-//    if (tmp >= 0) {
-//      return tmp;
-//    }
-//    int result = tmp & 0x7f;
-//    if ((tmp = readRawByte()) >= 0) {
-//      result |= tmp << 7;
-//    } else {
-//      result |= (tmp & 0x7f) << 7;
-//      if ((tmp = readRawByte()) >= 0) {
-//        result |= tmp << 14;
-//      } else {
-//        result |= (tmp & 0x7f) << 14;
-//        if ((tmp = readRawByte()) >= 0) {
-//          result |= tmp << 21;
-//        } else {
-//          result |= (tmp & 0x7f) << 21;
-//          result |= (tmp = readRawByte()) << 28;
-//          if (tmp < 0) {
-//            // Discard upper 32 bits.
-//            for (int i = 0; i < 5; i++) {
-//              if (readRawByte() >= 0) {
-//                return result;
-//              }
-//            }
-//            throw InvalidProtocolBufferException.malformedVarint();
-//          }
-//        }
-//      }
-//    }
-//    return result;
 	private void readSize(ObjectProtocolCacheBean bean) {
 		IoBuffer buff = bean.buff.getFirst();
 		for(int i = 1; i < 6 - bean.checkPos ; i++){

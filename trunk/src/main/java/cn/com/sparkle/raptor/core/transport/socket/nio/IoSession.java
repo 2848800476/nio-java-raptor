@@ -2,23 +2,18 @@ package cn.com.sparkle.raptor.core.transport.socket.nio;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.log4j.Logger;
 
-import cn.com.sparkle.raptor.core.buff.CycleBuff;
 import cn.com.sparkle.raptor.core.buff.IoBuffer;
 import cn.com.sparkle.raptor.core.collections.LastAccessTimeLinkedList.Entity;
-import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue.Bulk;
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue;
 import cn.com.sparkle.raptor.core.collections.MaximumSizeArrayCycleQueue.QueueFullException;
-import cn.com.sparkle.raptor.core.collections.Queue;
 import cn.com.sparkle.raptor.core.handler.IoHandler;
 import cn.com.sparkle.raptor.core.transport.socket.nio.exception.SessionHavaClosedException;
 import cn.com.sparkle.raptor.core.util.TimeUtil;
@@ -47,12 +42,13 @@ public class IoSession {
 
 	private AtomicInteger registerBarrier = new AtomicInteger(0);
 	
-	public IoSession(NioSocketProcessor processor, SocketChannel channel,
+	public IoSession(final NioSocketProcessor processor,final SocketChannel channel,
 			IoHandler handler) {
 		this.processor = processor;
 		this.channel = channel;
 		this.handler = handler;
 		this.lastAccessTimeLinkedListwrapSession = new Entity<IoSession>(this);
+		
 	}
 	public MaximumSizeArrayCycleQueue<ByteBuffer> getDebugQueue(){
 		return waitSendQueue;
@@ -84,6 +80,7 @@ public class IoSession {
 	public void suspendRead() {
 //		logger.debug(this.getRemoteAddress() + " suspendRead");
 		if(!isSuspendRead){
+//			logger.debug(this.getRemoteAddress() + " suspendRead");
 			isSuspendRead = true;
 			processor.unRegisterRead(this);
 		}
@@ -92,6 +89,7 @@ public class IoSession {
 	public void continueRead() {
 //		logger.debug(this.getRemoteAddress() + " continueRead");
 		if(isSuspendRead){
+//			logger.debug(this.getRemoteAddress() + " continueRead");
 			isSuspendRead = false;
 			processor.registerRead(this);
 		}
@@ -99,57 +97,6 @@ public class IoSession {
 	protected AtomicInteger getRegisterBarrier(){
 		return registerBarrier;
 	}
-//	protected boolean unSetWriteRegisterBarrier(){
-//		boolean isSuccess = registerBarrier.getAndSet(0) == 1;
-//		return isSuccess;
-//	}
-//	protected boolean setWriteRegisterBarrier(){
-//		boolean isSuccess = registerBarrier.getAndSet(1) == 0;
-//		return isSuccess;
-//		
-//	}
-
-//	public boolean tryWrite(IoBuffer message) throws SessionHavaClosedException {
-//		// this progress of lock is necessary,because the method tryWrite will
-//		// be invoked in many different threads
-//		
-//		
-//		if (isClose) {
-//			throw new SessionHavaClosedException("IoSession have closed!");
-//		}
-//		if(!waitSendQueueList.hasRemain()){
-//			return false;
-//		}
-//		ByteBuffer buffer = message.getByteBuffer().asReadOnlyBuffer();
-//		buffer.limit(buffer.position()).position(0);
-//		if(!processor.getNioSocketConfigure().isAsyncTransportOptimize() && waitSendQueueList.size() == 0){
-//			//try send right now
-//			try {
-//				channel.write(buffer);
-//			} catch (IOException e) {
-//				this.closeSocketChannel();
-//				throw new SessionHavaClosedException("IoSession have closed!");
-//			}
-//			if(!buffer.hasRemaining()){
-//				if(message instanceof CycleBuff){
-//					((CycleBuff)message).close();
-//				}
-//				return true;
-//			}
-//		}
-//		
-//		int flag = registerBarrier.getAndSet(2);
-//			try {
-//				waitSendQueueList.push(message);
-//				waitSendQueue.push(buffer);
-//			} catch (QueueFullException e) {
-//				throw new RuntimeException("fatal error",e);
-//			}
-//			if(flag == 0){
-//				processor.registerWrite(this);
-//			}
-//		return true;
-//	}
 	public boolean tryWrite(IoBuffer message) throws SessionHavaClosedException {
 		return tryWrite(message,true);
 	}
@@ -180,7 +127,6 @@ public class IoSession {
 //				return true;
 //			}
 		}
-		
 		int flag = registerBarrier.getAndSet(2);
 		
 			try {
@@ -194,26 +140,12 @@ public class IoSession {
 			}
 		return true;
 	}
-//	public void write(IoBuffer message) throws SessionHavaClosedException {
-//		int i = 0 ;
-//		while (true) {
-//			i++;
-//			if (tryWrite(message)) {
-//				break;
-//			}
-//			try {
-//				Thread.sleep(1);
-//			} catch (InterruptedException e) {
-//			}
-//		}
-//	}
+
 	public void write(IoBuffer message) throws SessionHavaClosedException {
 		write(message,true);
 	}
 	public void write(IoBuffer message,boolean flush) throws SessionHavaClosedException {
-		int i = 0 ;
 		while (true) {
-			i++;
 			if (tryWrite(message,flush)) {
 				break;
 			}
@@ -224,19 +156,6 @@ public class IoSession {
 		}
 	}
 
-	// public IoBuffer getLastButOneSendBuff() {
-	// IoBuffer buff = waitSendQueue.last();
-	// if (waitSendQueueSize.decrementAndGet() > 0 &&
-	// buff.getByteBuffer().limit() < buff.getByteBuffer().capacity()) {
-	// waitSendQueue.pollLast();
-	// buff.getByteBuffer().position(buff.getByteBuffer().limit()).limit(buff.getByteBuffer().capacity());
-	// return buff;
-	// }else {
-	// waitSendQueueSize.addAndGet(1);//fix negative or zero size
-	// return null;
-	// }
-	//
-	// }
 	public IoBuffer getLastWaitSendBuffer() {
 		int is = isGetLast.addAndGet(1);
 		IoBuffer buffer = waitSendQueueList.last();
@@ -328,4 +247,5 @@ public class IoSession {
 		lastActiveTime = TimeUtil.currentTimeMillis();
 		return lastAccessTimeLinkedListwrapSession;
 	}
+	
 }

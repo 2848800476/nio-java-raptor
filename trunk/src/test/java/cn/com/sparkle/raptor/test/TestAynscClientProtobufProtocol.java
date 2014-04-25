@@ -34,8 +34,9 @@ public class TestAynscClientProtobufProtocol {
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		nsc.setTcpNoDelay(true);
 		nsc.setProcessorNum(1);
-		nsc.setCycleRecieveBuffCellSize(10000);
+		nsc.setCycleRecieveBuffCellSize(1000);
 		nsc.setSoTimeOut(10);
+		nsc.setSentBuffSize( 16 * 1024);
 //		nsc.setReuseAddress(true);
 		
 		NioSocketClient client = new NioSocketClient(nsc);
@@ -44,7 +45,7 @@ public class TestAynscClientProtobufProtocol {
 //		protocol.registerMessage(1, PersonMessage.Person.getDefaultInstance());
 		
 		TestAynscClientProtobufProtocolHandler ih = new TestAynscClientProtobufProtocolHandler();
-		IoHandler handler = new MultiThreadProtecolHandler(1000, 16 * 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, ih);
+		IoHandler handler = new MultiThreadProtecolHandler(1000, 64 * 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, ih);
 		for(int i = 0 ; i < 1 ; i++){
 //		while(true){
 			WaitFinishConnect wfc = new WaitFinishConnect();
@@ -53,9 +54,9 @@ public class TestAynscClientProtobufProtocol {
 			
 //			client.connect(new InetSocketAddress("10.238.130.23",1234),handler, wfc);
 //			client.connect(new InetSocketAddress("127.0.0.1",1234),handler, wfc).get();
-			client.connect(new InetSocketAddress("10.32.80.85",1234),handler, wfc).get();
+//			client.connect(new InetSocketAddress("10.32.80.85",1234),handler, wfc).get();
 //			client.connect(new InetSocketAddress("10.232.133.72", 10011), handler);
-//			client.connect(new InetSocketAddress("10.232.35.11",1234), handler,wfc);	
+			client.connect(new InetSocketAddress("10.232.35.16",1234), handler,wfc);	
 //			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );
 //			wfc.count.await();
 //			Person.Builder builder = Person.newBuilder().setId(1).setName(ih.soure);
@@ -77,7 +78,7 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 	public String soure = "";
 	
 	public TestAynscClientProtobufProtocolHandler(){
-		for(int i = 0 ; i < 2 ; i++){
+		for(int i = 0 ; i < 1 ; i++){
 			soure += origin;
 		}
 	}
@@ -121,7 +122,7 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 						Person.Builder builder = Person.newBuilder().setId(++i).setName(soure);
 //						AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
 						CountDownLatch c = send(builder.build(),session);
-//						c.await();
+						c.await();
 //						break;
 					} catch (Exception e) {
 						e.printStackTrace();
@@ -170,7 +171,7 @@ class TestAynscClientProtobufProtocolHandler implements ProtocolHandler{
 			lock.lock();
 			++cc;
 			++tc;
-			if(cc%10000 == 0){
+			if(cc%100000 == 0){
 				long tt = System.currentTimeMillis() - ct;
 				System.out.println((cc*1000/tt) + "/s   " + (tc*1000 /(System.currentTimeMillis() - start)) + "/s");
 				ct = System.currentTimeMillis();
