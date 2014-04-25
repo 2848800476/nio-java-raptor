@@ -43,7 +43,7 @@ public class TestServerProtobufProtocol {
 //		ProtoBufProtocol protocol = new ProtoBufProtocol();
 //		protocol.registerMessage(1, PersonMessage.Person.getDefaultInstance());
 		NioSocketServer server = new NioSocketServer(nsc);
-		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(5000,16 * 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, new ProtobufProtocolHandler()));
+		server.bind(new InetSocketAddress(1234),new MultiThreadProtecolHandler(1000,64 * 1024, 20, 300, 60, TimeUnit.SECONDS,protocol, new ProtobufProtocolHandler()));
 //		server.bind(new InetSocketAddress(12345),new FilterChain(new TestHandler()));
 	}
 	
@@ -68,9 +68,15 @@ class ProtobufProtocolHandler implements ProtocolHandler{
 			Person p = (Person)receiveObject;
 //			System.out.println(p.getId());
 			
-			Person.Builder builder = Person.newBuilder().setId(p.getId()).setName(soure);
+			Person.Builder builder = Person.newBuilder().setId(p.getId()).setName(p.getName());
 //			AddressBook.Builder ab = AddressBook.newBuilder().addPerson(builder);
+			
+			long ct = System.currentTimeMillis();
 			session.writeObject( builder.build() );
+			if(System.currentTimeMillis() - ct > 1000){
+				TestServerByteProtocol.logger.debug("more than 1000 ms");
+//				System.exit(0);
+			}
 //			try {
 //				Thread.sleep(1);
 //			} catch (InterruptedException e) {

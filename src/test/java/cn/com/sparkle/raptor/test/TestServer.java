@@ -44,48 +44,7 @@ class TestHandler implements IoHandler{
 	byte[] b = new byte[128];
 	@Override
 	public void onMessageRecieved(IoSession session, IoBuffer message) {
-		
-		
-//		Integer size = (Integer)session.attachment();
-//		if(size == null) size = 0;
-//		size += message.getByteBuffer().remaining();
-//		message.getByteBuffer().position(message.getByteBuffer().limit());
-//		session.attach(size);
-//		if(size != 128) return;
-//		session.attach(0);
-//		
-//		IoBuffer temp = new AllocateBytesBuff(128,false);
-//		temp.getByteBuffer().position(temp.getByteBuffer().limit());
-		
-//		System.out.println(message.getByteBuffer().remaining());
-		IoBuffer temp = new AllocateBytesBuff(message.getByteBuffer().remaining(),false);
-		if(message instanceof CycleBuff){
-			((CycleBuff)message).close();
-		}
-//		temp.getByteBuffer().position(temp.getByteBuffer().limit());
-//		try {
-//			session.write(temp);
-//		} catch (SessionHavaClosedException e1) {
-//			// TODO Auto-generated catch block
-//			e1.printStackTrace();
-//		}
-		long c = System.currentTimeMillis();
-		try {
-			while(temp.getByteBuffer().hasRemaining()){
-				session.getChannel().write(temp.getByteBuffer());
-				
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		System.out.println(System.currentTimeMillis() - c);
-//		try {
-//			session.getChannel().write(ByteBuffer.wrap(b));
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
+	
 	}
 
 	@Override
@@ -98,7 +57,6 @@ class TestHandler implements IoHandler{
 	public void onSessionClose(IoSession session) {
 		// TODO Auto-generated method stub
 		int temp = i.addAndGet(-1);
-		if(temp%1000 ==0) System.out.println("disconnected " + i);
 //		System.out.println("session closed!!!");
 	}
 
@@ -107,7 +65,7 @@ class TestHandler implements IoHandler{
 	@Override
 	public void onSessionOpened(IoSession session) {
 		// TODO Auto-generated method stub
-		
+		session.closeSession();
 		if(i.get()==0) time = System.currentTimeMillis();
 		int temp = i.addAndGet(1);
 //		System.out.println("session opend!!!" + temp);

@@ -100,6 +100,8 @@ public class NioSocketConnector {
 								qb);
 					} catch (ClosedChannelException e) {
 						qb.handler.catchException(session, e);
+						qb.future.setResult(false);
+						qb.future.run();
 					}
 					waitConnectQueue.poll();
 				}

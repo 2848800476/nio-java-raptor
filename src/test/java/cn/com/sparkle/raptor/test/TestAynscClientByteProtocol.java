@@ -25,17 +25,18 @@ public class TestAynscClientByteProtocol {
 	public static void main(String[] args) throws Exception {
 		NioSocketConfigure nsc = new NioSocketConfigure();
 		nsc.setTcpNoDelay(true);
-		nsc.setProcessorNum(2);
-		nsc.setSoLinger(5);
-		nsc.setCycleRecieveBuffCellSize(1000);
-//		nsc.setRecieveBuffSize(8 * 1024);
+		nsc.setProcessorNum(1);
+//		nsc.setSoLinger(5);
+		nsc.setCycleRecieveBuffCellSize(2000);
+		nsc.setRecieveBuffSize(16 * 1024);
 		NioSocketClient client = new NioSocketClient(nsc);
-		IoHandler handler = new MultiThreadProtecolHandler(5000,  16*1024, 20, 300, 60, TimeUnit.SECONDS,new ByteProtocol(256), new TestAsyncByteObjetClientHandler());
+		System.out.println(50);
+		IoHandler handler = new MultiThreadProtecolHandler(1000,  16*1024, 2, 300, 60, TimeUnit.SECONDS,new ByteProtocol(1024), new TestAsyncByteObjetClientHandler());
 		for(int i = 0 ; i < 1; i++){
 //			client.connect(new InetSocketAddress("10.10.83.243",1234), handler,"aaa" + i);
 //			client.connect(new InetSocketAddress("192.168.3.100",1234),handler,"aaa" + i );
 //			client.connect(new InetSocketAddress("127.0.0.1",1234),handler,"aaa" + i );
-			client.connect(new InetSocketAddress("10.232.35.11",1234), handler,"aaa" + i );
+			client.connect(new InetSocketAddress("10.232.35.16",1234), handler,"aaa" + i );
 //			client.connect(new InetSocketAddress("10.232.128.11",1234),handler,"aaa" + i );
 			
 		}
@@ -136,11 +137,15 @@ class TestAsyncByteObjetClientHandler implements ProtocolHandler{
 			lock.lock();
 			++cc;
 			++tc;
-			if(cc%10000 == 0){
+			if(cc%20000 == 0){
 				long tt = System.currentTimeMillis() - ct;
-				System.out.println((cc*1000/tt) + "/s   " + (tc * 1000/(System.currentTimeMillis() - start) ) + "/s");
-				ct = System.currentTimeMillis();
-				cc = 1;
+				try{
+					System.out.println((cc*1000/tt) + "/s   " + (tc * 1000/(System.currentTimeMillis() - start) ) + "/s");
+					ct = System.currentTimeMillis();
+					cc = 1;
+				}catch(Throwable e){
+					System.out.println(tt);
+				}
 			}
 		}finally{
 			lock.unlock();
@@ -154,7 +159,7 @@ class TestAsyncByteObjetClientHandler implements ProtocolHandler{
 	}
 	@Override
 	public void onOneThreadMessageSent(ProtocolHandlerIoSession session,int sendSize) {
-		
+//		System.out.println(sendSize);
 	}
 
 	
